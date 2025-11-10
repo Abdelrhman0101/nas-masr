@@ -1,0 +1,63 @@
+<?php
+
+use App\Http\Controllers\Admin\CategoryFieldsController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CarController;
+use App\Http\Controllers\api\UserController;
+use App\Support\Section;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ListingController;
+
+
+
+Route::post('/register', [AuthController::class, 'register']);
+Route::get('v1/test', fn() => response()->json(['ok' => true]));
+Route::get('category-fields', [CategoryFieldsController::class, 'index']);
+
+Route::prefix('v1/{section}')->group(function () {
+
+    Route::get('ping', function (string $section) {
+        $sec = Section::fromSlug($section);
+        return response()->json([
+            'section' => $sec->slug,
+            'category_id' => $sec->id(),
+            'fields_count' => count($sec->fields),
+        ]);
+    });
+
+    Route::post('validate-sample', function (App\Http\Requests\GenericListingRequest $req) {
+        return response()->json(['ok' => true, 'data' => $req->validated()]);
+    });
+
+
+    // Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
+
+    Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy']);
+    });
+});
+
+
+Route::prefix('admin')
+    ->middleware(['auth:sanctum', 'admin'])
+    ->group(function () {
+        Route::post('category-fields', [CategoryFieldsController::class, 'store']);
+        Route::put('category-fields/{categoryField}', [CategoryFieldsController::class, 'update']);
+        Route::delete('category-fields/{categoryField}', [CategoryFieldsController::class, 'destroy']);
+    });
+
+Route::get('/all-cars', [CarController::class, 'index']);
+Route::middleware('auth:sanctum')->post('/add-car', [CarController::class, 'store']);
+
+// Route::get('/values/{categorySlug?}', [CategoryFieldsController::class, 'index']);
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [UserController::class, 'logout']);
+    Route::get('/get-profile', [UserController::class, 'getUserProfile']);
+
+});
+
+
