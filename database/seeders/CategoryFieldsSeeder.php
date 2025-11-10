@@ -41,7 +41,7 @@ class CategoryFieldsSeeder extends Seeder
                 'category_slug' => 'cars_rent',
                 'field_name' => 'year',
                 'display_name' => 'السنة',
-                'type' => 'int',
+                'type' => 'string',
                 'options' => range(2000, 2030),
                 'required' => true,
                 'filterable' => true,
