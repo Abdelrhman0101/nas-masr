@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             CarMakesModelsSeeder::class,
             CategoryFieldsSeeder::class,
             CategoriesTableSeeder::class,
+            SystemSettingsSeeder::class,
             AdminSeeder::class,
         ]);
     }
