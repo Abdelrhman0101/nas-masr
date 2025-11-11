@@ -9,6 +9,7 @@ use App\Support\Section;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ListingController;
+use App\Http\Controllers\SystemSettingController;
 
 
 
@@ -19,6 +20,8 @@ Route::get('v1/test', fn() => response()->json(['ok' => true]));
 Route::get('category-fields', [CategoryFieldsController::class, 'index']);
 // Public Categories Route
 Route::get('categories', [categoryController::class, 'index']);
+
+Route::get('/system-settings',[SystemSettingController::class,'index']);
 
 Route::prefix('v1/{section}')->group(function () {
 
@@ -57,6 +60,9 @@ Route::prefix('admin')
         Route::post('categories', [CategoryController::class, 'store']);
         Route::put('categories/{category}', [CategoryController::class, 'update']);
         Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
+
+        // System Settings Routes
+        // Route::apiResource('system-settings', SystemSettingController::class);
 
     });
 

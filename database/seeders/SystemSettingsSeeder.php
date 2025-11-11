@@ -17,8 +17,7 @@ class SystemSettingsSeeder extends Seeder
             ['id' => 1],
             [
                 'support_number' => '+971 54 519 4553',
-                // نحفظ مسار مجلد الصور؛ يمكنك وضع اسم الملف لاحقًا داخل هذا المجلد
-                'panner_image'   => 'storage/panner_image/',
+                'panner_image'   => 'storage/uploads/banner/53228567cbfa1e8ef884e31013cba35dffde42d3.bng',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ]
