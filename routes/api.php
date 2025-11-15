@@ -92,5 +92,6 @@ Route::middleware('auth:sanctum')->post('/add-car', [CarController::class, 'stor
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [UserController::class, 'logout']);
     Route::get('/get-profile', [UserController::class, 'getUserProfile']);
+    Route::put('/edit-profile', [UserController::class, 'editProfile']);
 });
 

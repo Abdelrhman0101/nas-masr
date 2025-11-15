@@ -10,6 +10,7 @@ class Category extends Model
         'slug',
         'name',
         'icon',
+        'sort_order',
         'is_active',
     ];
 

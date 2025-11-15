@@ -32,6 +32,32 @@ class UserController extends Controller
         ], 200);
     }
 
+    public function editProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response([
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'phone' => ['sometimes', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($user->id)],
+            'password' => ['sometimes', 'string', 'min:8'],
+            'lat' => ['sometimes', 'nullable', 'numeric'],
+            'lng' => ['sometimes', 'nullable', 'numeric'],
+            'referral_code' => ['sometimes', 'nullable', 'string'],
+        ]);
+
+        $user->update($validated);
+
+        return response([
+            'message' => 'Profile updated successfully',
+            'data' => $user->fresh()
+        ], 200);
+    }
 
 
     public function logout(Request $request)
