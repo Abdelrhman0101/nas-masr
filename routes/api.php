@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\Admin\StatsController;
-
-
+use App\Http\Controllers\BestAdvertiserController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('v1/test', fn() => response()->json(['ok' => true]));
@@ -26,6 +25,8 @@ Route::get('/system-settings', [SystemSettingController::class, 'index']);
 
 //public listing for specific user
 Route::get('users/{user}', [UserController::class, 'showUserWithListings']);
+//get public  listing best
+Route::get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
 
 Route::prefix('v1/{section}')->group(function () {
 
@@ -74,13 +75,16 @@ Route::prefix('admin')
         Route::get('users-summary', [StatsController::class, 'usersSummary']);
 
         // Admin Users management
-    Route::get('users/{user}', [UserController::class, 'showUserWithListings']);
-    Route::put('users/{user}', [UserController::class, 'updateUser']);
-    Route::post('users', [UserController::class, 'storeUser']);
-    Route::delete('users/{user}', [UserController::class, 'deleteUser']);
+        Route::get('users/{user}', [UserController::class, 'showUserWithListings']);
+        Route::put('users/{user}', [UserController::class, 'updateUser']);
+        Route::post('users', [UserController::class, 'storeUser']);
+        Route::delete('users/{user}', [UserController::class, 'deleteUser']);
         Route::patch('users/{user}/block', [UserController::class, 'blockedUser']);
         // Route::get('users/{user}/listings', [UserController::class, 'userListings']);
 
+        //Best Advertiser
+        Route::post('/featured', [BestAdvertiserController::class, 'store']);
+        Route::put('/disable/{bestAdvertiser}', [BestAdvertiserController::class, 'disable']);
     });
 
 Route::get('/all-cars', [CarController::class, 'index']);
@@ -94,6 +98,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-profile', [UserController::class, 'getUserProfile']);
     Route::put('/edit-profile', [UserController::class, 'editProfile']);
     Route::post('/create-agent-code', [UserController::class, 'storeAgent']);
-    Route::get('/all-clients',[UserController::class,'allClients']);
+    Route::get('/all-clients', [UserController::class, 'allClients']);
 });
-
