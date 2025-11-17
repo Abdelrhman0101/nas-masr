@@ -84,6 +84,7 @@ class ListingResource extends JsonResource
             'attributes' => $attrs,
             'views' => $this->views,
             'rank' => $this->rank,
+            'country_code' => $this->country_code,
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

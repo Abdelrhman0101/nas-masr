@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Models\UserClient;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 
@@ -15,26 +16,63 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        $user = User::where('phone', $data['phone'])->first();
-        if (!$user) {
+        $existingUser = User::where('phone', $data['phone'])->first();
+
+        if ($existingUser) {
+
+            if ($existingUser->status !== 'active') {
+                return response()->json(['message' => 'User is inactive. Please contact support.'], 403);
+            }
+
+            if (!Hash::check($data['password'], $existingUser->password)) {
+                return response()->json(['message' => 'Invalid credentials'], 401);
+            }
+
+            if (!empty($data['referral_code']) && $existingUser->referral_code !== $data['referral_code']) {
+                return response()->json(['message' => 'Invalid referral code'], 401);
+            }
+
+            $message = "User logged in successfully.";
+            $user = $existingUser;
+        } else {
+
+            if (!empty($data['referral_code'])) {
+
+                $code = UserClient::where('user_id', $data['referral_code'])->first();
+                if (!$code) {
+                    return response([
+                        'message' => 'Referral code not found'
+                    ], 404);
+                }
+            }
+
             $user = User::create([
                 'name' => $data['name'] ?? null,
                 'phone' => $data['phone'],
                 'role' => 'user',
                 'password' => Hash::make($data['password']),
-                'agent_number' => $data['agent_number'] ?? null,
+                'country_code' => $data['country_code'] ?? null,
+                'referral_code' => $data['referral_code'] ?? null,
             ]);
+            if (!empty($data['referral_code'])) {
+                $clients = $code->clients ?? [];
 
-            $message = 'User registered successfully.';
-        } else {
-            if ($user->status !== 'active') {
-                return response()->json(['message' => 'User is inactive. Please contact support.'], 403);
-            }
-            if (!Hash::check($data['password'], $user->password)) {
 
-                return response()->json(['message' => 'Invalid credentials'], 401);
+                if (in_array($user->id, $clients)) {
+                    return response()->json([
+                        "message" => "You have already used this referral code."
+                    ]);
+                }
+
+                $clients[] = $user->id;
+
+
+                $code->clients = $clients;
+                $code->save();
             }
-            $message = 'User logged in successfully.';
+
+
+            $message = "User registered successfully.";
         }
 
         $token = $user->createToken('nasmasr_token')->plainTextToken;

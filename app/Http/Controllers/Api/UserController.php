@@ -6,9 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Listing;
 use App\Models\User;
 use App\Models\UserClient;
-use Faker\Provider\UserAgent;
-use GuzzleHttp\Client;
-use GuzzleHttp\Psr7\Message;
 use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Http\Request;

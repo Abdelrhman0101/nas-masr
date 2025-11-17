@@ -30,7 +30,8 @@ class Listing extends Model
         'whatsapp_phone',
         'make_id',
         'model_id',
-        'rank'
+        'rank',
+        'country_code',
     ];
 
     protected $casts = [

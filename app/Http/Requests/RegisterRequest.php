@@ -43,6 +43,7 @@ class RegisterRequest extends FormRequest
                 'min:6',
             ],
             'referral_code' => ['nullable', 'string', 'max:20'],
+            'country_code' => ['nullable', 'string', 'max:10'],
             'lat' => ['nullable', 'decimal:7,4'],
             'lng' => ['nullable', 'decimal:7,4'],
         ];
@@ -61,6 +62,7 @@ class RegisterRequest extends FormRequest
             'referral_code.max' => 'Agent number may not be longer than 20 characters.',
             'lat.decimal' => 'Latitude must be a decimal number with 7 digits before the decimal point and 4 digits after the decimal point.',
             'lng.decimal' => 'Longitude must be a decimal number with 7 digits before the decimal point and 4 digits after the decimal point.',
+            'country_code.max' => 'Country code may not be longer than 10 characters.',
         ];
     }
 

@@ -97,6 +97,7 @@ final class Section
             "plan_type" => ['nullable', 'string', 'in:standard,premium,featured,free'],
             'contact_phone' => ['nullable', 'string', 'max:20'],
             'whatsapp_phone' => ['nullable', 'string', 'max:20'],
+            'country_code' => ['nullable', 'string', 'max:20'],
             // 'make_id' => ['nullable', 'integer', 'exists:makes,id'],
             // 'model_id' => ['nullable', 'integer', 'exists:models,id'],
             // 'make' => ['nullable', 'string'],

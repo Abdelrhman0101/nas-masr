@@ -31,7 +31,8 @@ class User extends Authenticatable
         'lat',
         'lng',
         'status',
-        'address'
+        'address',
+        'country_code'
     ];
 
     /**

@@ -41,6 +41,7 @@ class ListingService
                 'make_id',
                 'model_id',
                 'rank',
+                'country_code',
             ]);
 
             $listing = Listing::create($common + [
@@ -85,6 +86,7 @@ class ListingService
                 'make_id',
                 'model_id',
                 'rank',
+                'country_code',
             ]));
 
             if (array_key_exists('attributes', $data)) {
