@@ -90,8 +90,11 @@ class AuthController extends Controller
     {
 
         $user->password = Hash::make('123456789');
-        $user->save();
-        return response()->json(['message' => 'Password changed successfully']);
-    }
 
+        $user->save();
+        return response()->json([
+            'message' => 'مرحبًا ' . $user->name . '، تم تغيير كلمة السر الخاصة بحسابك إلى: 123456789. يرجى تسجيل الدخول وتغييرها بعد أول دخول. فريق ناس مصر',
+            // 'password'=>
+        ]);
+    }
 }
