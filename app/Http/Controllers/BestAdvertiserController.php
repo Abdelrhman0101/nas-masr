@@ -5,10 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\BestAdvertiser;
 use App\Models\Category;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Support\Section;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Cache;
+
+
 
 class BestAdvertiserController extends Controller
 {
@@ -95,52 +100,76 @@ class BestAdvertiserController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
-            'category_ids' => ['required', 'array', 'min:1'],
+            'user_id'        => ['required', 'integer', 'exists:users,id'],
+            'category_ids'   => ['required', 'array', 'min:1'],
             'category_ids.*' => ['integer'],
-            'max_listings' => ['nullable', 'integer', 'min:1'],
-            'is_active' => ['boolean'],
+            'max_listings'   => ['nullable', 'integer', 'min:1'],
+            'is_active'      => ['boolean'],
         ]);
 
-        // Check user active
+        $data['is_active'] = $data['is_active'] ?? true;
+
         $user = User::find($data['user_id']);
         if (!$user || $user->status !== 'active') {
             return response()->json(['message' => 'User must be active'], 422);
         }
 
-        // Validate categories exist
         $existingCategoryIds = Category::whereIn('id', $data['category_ids'])->pluck('id')->all();
         $invalidIds = array_diff($data['category_ids'], $existingCategoryIds);
-
         if (!empty($invalidIds)) {
             return response()->json([
-                'message' => 'Some categories do not exist',
+                'message'     => 'Some categories do not exist',
                 'invalid_ids' => $invalidIds
             ], 422);
         }
 
-        // Check if advertiser exists
-        $ba = BestAdvertiser::where('user_id', $data['user_id'])->first();
+        $limit = Cache::rememberForever('settings:featured_users_count', function () {
+            return (int) (SystemSetting::where('key', 'featured_users_count')->value('value') ?? 8);
+        });
 
-        if ($ba) {
-            $ba->update($data);
-            $message = 'Best advertiser updated';
-        } else {
-            $ba = BestAdvertiser::create($data);
-            $message = 'Best advertiser created';
-        }
+        [$ba, $message] = DB::transaction(function () use ($data, $limit) {
+            
+            $ba = BestAdvertiser::where('user_id', $data['user_id'])->lockForUpdate()->first();
 
-        // Fetch the categories for response
+            $wasActive    = (bool) ($ba->is_active ?? false);
+            $willBeActive = (bool) $data['is_active'];
+
+            $activeCountQuery = BestAdvertiser::where('is_active', true);
+            if ($ba && $wasActive) {
+                $activeCountQuery->where('user_id', '!=', $ba->user_id);
+            }
+            $activeCount = (int) $activeCountQuery->lockForUpdate()->count();
+
+            if ((!$wasActive && $willBeActive) || (!$ba && $willBeActive)) {
+                if ($activeCount >= $limit) {
+                    throw ValidationException::withMessages([
+                        'limit' => "تم بلوغ الحد الأقصى للمستخدمين المميزين ({$limit})."
+                    ]);
+                }
+            }
+
+            if ($ba) {
+                $ba->update($data);
+                $message = 'Best advertiser updated';
+            } else {
+                $ba = BestAdvertiser::create($data);
+                $message = 'Best advertiser created';
+            }
+
+            return [$ba, $message];
+        });
+
         $categories = Category::whereIn('id', $ba->category_ids)->get(['id', 'name', 'slug']);
 
         return response()->json([
             'message' => $message,
-            'data' => [
+            'data'    => [
                 'best_advertiser' => $ba,
-                'categories' => $categories,
+                'categories'      => $categories,
             ]
         ], $ba->wasRecentlyCreated ? 201 : 200);
     }
+
 
 
 

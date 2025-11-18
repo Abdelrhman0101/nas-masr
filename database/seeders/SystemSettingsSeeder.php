@@ -37,7 +37,7 @@ class SystemSettingsSeeder extends Seeder
         DB::table('system_settings')->updateOrInsert(
             ['key' => 'panner_image'],
             [
-                'value'       => 'storage/uploads/banner/53228567cbfa1e8ef884e31013cba35dffde42d3.png',
+                'value'       => 'storage/uploads/banner/53228567cbfa1e8ef884e31013cba35dffde42d3.jpg',
                 'type'        => 'string',
                 'group'       => 'appearance',
                 'label'       => 'صورة البانر الرئيسية',
