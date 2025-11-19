@@ -79,22 +79,22 @@ final class Section
     public function rules(): array
     {
         $base = [
-            'price' => ['nullable', 'numeric', 'min:0'],
-            'description' => ['nullable', 'string'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'description' => ['required', 'string'],
 
             'governorate_id' => ['nullable', 'integer', 'exists:governorates,id'],
             'city_id' => ['nullable', 'integer', 'exists:cities,id'],
-            'governorate' => ['nullable', 'string', 'max:100'],
-            'city' => ['nullable', 'string', 'max:100'],
+            'governorate' => ['required', 'string', 'max:100'],
+            'city' => ['required', 'string', 'max:100'],
 
             'lat' => ['nullable', 'numeric'],
             'lng' => ['nullable', 'numeric'],
             'address' => ['nullable', 'string', 'max:255'],
 
-            'main_image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'main_image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'images' => ['nullable', 'array', 'max:20'],
             'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            "plan_type" => ['nullable', 'string', 'in:standard,premium,featured,free'],
+            "plan_type" => ['required', 'string', 'in:standard,premium,featured,free'],
             'contact_phone' => ['nullable', 'string', 'max:20'],
             'whatsapp_phone' => ['nullable', 'string', 'max:20'],
             'country_code' => ['nullable', 'string', 'max:20'],

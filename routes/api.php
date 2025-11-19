@@ -12,6 +12,7 @@ use App\Http\Controllers\ListingController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\Admin\StatsController;
 use App\Http\Controllers\BestAdvertiserController;
+use App\Models\Listing as ListingModel;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('v1/test', fn() => response()->json(['ok' => true]));
@@ -29,6 +30,11 @@ Route::get('users/{user}', [UserController::class, 'showUserWithListings']);
 Route::get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
 
 Route::prefix('v1/{section}')->group(function () {
+    Route::bind('listing', function ($value) {
+        $section = request()->route('section');
+        $sec = Section::fromSlug($section);
+        return ListingModel::where('id', $value)->where('category_id', $sec->id())->firstOrFail();
+    });
 
     Route::get('ping', function (string $section) {
         $sec = Section::fromSlug($section);

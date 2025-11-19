@@ -12,14 +12,18 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class ListingController extends Controller
 {
     use HasRank;
-    public function index(string $section, Request $request): AnonymousResourceCollection
+
+
+
+    public function index(string $section, Request $request): \Illuminate\Http\JsonResponse
     {
         $sec = Section::fromSlug($section);
-
         $typesByKey = Listing::typesByKeyForSection($sec);
 
         $filterableKeys = collect($sec->fields)
@@ -27,9 +31,16 @@ class ListingController extends Controller
             ->pluck('field_name')
             ->all();
 
+        // Eager load بحسب دعم make/model
+        $with = ['attributes', 'governorate', 'city'];
+        if ($sec->supportsMakeModel()) {
+            $with[] = 'make';
+            $with[] = 'model';
+        }
+
         $q = Listing::query()
             ->forSection($sec)
-            ->with(['attributes', 'governorate', 'city', 'make', 'model'])
+            ->with($with)
             ->orderByDesc('rank')
             ->keyword($request->query('q'))
             ->filterGovernorate($request->query('governorate_id'), $request->query('governorate'))
@@ -43,33 +54,105 @@ class ListingController extends Controller
         }
 
         if ($plan = $request->query('plan_type')) {
-            $q->where('plan_type', $plan);
+            if (Schema::hasColumn('listings', 'plan_type')) {
+                $q->where('plan_type', $plan);
+            }
         }
 
-
+        // attr = مساواة
         $attrEq = (array) $request->query('attr', []);
         $attrEq = array_intersect_key($attrEq, array_flip($filterableKeys));
         $q->attrEq($attrEq, $typesByKey);
 
+        // attr_in = مجموعة قيم
         $attrIn = (array) $request->query('attr_in', []);
         $attrIn = array_intersect_key($attrIn, array_flip($filterableKeys));
         $q->attrIn($attrIn, $typesByKey);
 
+        // attr_min / attr_max = مدى
         $attrMin = (array) $request->query('attr_min', []);
         $attrMax = (array) $request->query('attr_max', []);
         $attrMin = array_intersect_key($attrMin, array_flip($filterableKeys));
         $attrMax = array_intersect_key($attrMax, array_flip($filterableKeys));
         $q->attrRange($attrMin, $attrMax, $typesByKey);
 
+        // attr_like = بحث نصي جزئي
         $attrLike = (array) $request->query('attr_like', []);
         $attrLike = array_intersect_key($attrLike, array_flip($filterableKeys));
         $q->attrLike($attrLike);
 
+        // بدون Pagination: رجّع الكل
+        $rows = $q->get();
 
-        return ListingResource::collection(
-            $q->paginate(15)->appends($request->query())
-        );
+        // زيّدي views لكل النتائج (تجميعيًا وبالشُحنات لتفادي استعلام ضخم واحد)
+        if ($rows->isNotEmpty()) {
+            $ids = $rows->pluck('id');
+            $ids->chunk(1000)->each(function ($chunk) {
+                DB::table('listings')
+                    ->whereIn('id', $chunk)
+                    ->update(['views' => DB::raw('views + 1')]);
+            });
+        }
+
+        $supportsMakeModel = $sec->supportsMakeModel();
+
+        // نبني الـ payload المصغّر المطلوب فقط
+        $items = $rows->map(function ($item) use ($supportsMakeModel) {
+            // attributes (EAV) كاملة
+            $attrs = [];
+            if ($item->relationLoaded('attributes')) {
+                foreach ($item->attributes as $row) {
+                    $attrs[$row->key] = $this->castEavValueRow($row);
+                }
+            }
+
+            $data = [
+                'attributes'      => $attrs,
+                'governorate'     => ($item->relationLoaded('governorate') && $item->governorate) ? $item->governorate->name : null,
+                'city'            => ($item->relationLoaded('city') && $item->city) ? $item->city->name : null,
+                'price'           => $item->price,
+                'contact_phone'   => $item->contact_phone,
+                'whatsapp_phone'  => $item->whatsapp_phone,
+                'main_image_url'  => $item->main_image ? asset('storage/' . $item->main_image) : null,
+                'created_at'      => $item->created_at,
+                'plan_type'       => $item->plan_type,
+            ];
+
+            if ($supportsMakeModel) {
+                $data['make']  = ($item->relationLoaded('make')  && $item->make)  ? $item->make->name  : null;
+                $data['model'] = ($item->relationLoaded('model') && $item->model) ? $item->model->name : null;
+            }
+
+            return $data;
+        })->values();
+
+        // نرجّع بدون Pagination
+        return response()->json($items);
     }
+
+    /**
+     * نفس منطق تحويل قيمة الـ EAV كما في الـ Resource
+     */
+    protected function castEavValueRow($attr)
+    {
+        return $attr->value_int
+            ?? $attr->value_decimal
+            ?? $attr->value_bool
+            ?? $attr->value_string
+            ?? $this->decodeJsonSafe($attr->value_json)
+            ?? $attr->value_date
+            ?? null;
+    }
+
+    protected function decodeJsonSafe($json)
+    {
+        if (is_null($json)) return null;
+        if (is_array($json)) return $json;
+
+        $x = json_decode($json, true);
+        return json_last_error() === JSON_ERROR_NONE ? $x : $json;
+    }
+
 
 
     public function store(string $section, GenericListingRequest $request, ListingService $service): ListingResource

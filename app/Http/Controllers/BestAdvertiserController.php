@@ -26,7 +26,7 @@ class BestAdvertiserController extends Controller
         $featured = BestAdvertiser::active()
             ->whereRaw('JSON_CONTAINS(category_ids, ?)', [json_encode((int) $categoryId)])
             ->with('user')
-            // ->orderBy('rank') // ترتيب المعلنين
+            // ->orderBy('rank')
             ->get();
 
         $userIds = $featured->pluck('user_id')->map(fn($v) => (int)$v)->all();
@@ -57,20 +57,35 @@ class BestAdvertiserController extends Controller
         // Collect listing IDs so we can eager load them
         $listingIds = collect($rows)->pluck('id')->all();
 
+        // زوّدنا المحافظه/المدينة فقط عشان نقرأ أسماءهم
         $listings = \App\Models\Listing::with([
             'attributes',
-            'governorate',
-            'city',
             'make',
             'model',
+            'governorate',
+            'city',
         ])->whereIn('id', $listingIds)->get()->keyBy('id');
 
-        // Group by user
+        // Group by user — مع إخراج minimal + attributes + price
         $byUser = [];
         foreach ($rows as $row) {
             $listing = $listings[$row->id] ?? null;
             if ($listing) {
-                $byUser[$row->user_id][] = new \App\Http\Resources\ListingResource($listing);
+                // attributes بالكامل (EAV)
+                $attrs = [];
+                if ($listing->relationLoaded('attributes')) {
+                    foreach ($listing->attributes as $attr) {
+                        $attrs[$attr->key] = $this->castEavValueRow($attr);
+                    }
+                }
+
+                $byUser[$row->user_id][] = [
+                    'main_image_url' => $listing->main_image ? asset('storage/' . $listing->main_image) : null,
+                    'governorate'    => ($listing->relationLoaded('governorate') && $listing->governorate) ? $listing->governorate->name : null,
+                    'city'           => ($listing->relationLoaded('city') && $listing->city) ? $listing->city->name : null,
+                    'price'          => $listing->price,
+                    'attributes'     => $attrs,
+                ];
             }
         }
 
@@ -81,11 +96,7 @@ class BestAdvertiserController extends Controller
             return [
                 'id' => $ba->id,
                 'user' => [
-                    'id' => $u->id,
                     'name' => $u->name,
-                    'phone' => $u->phone,
-                    'user_code' => $u->referral_code ?: (string)$u->id,
-                    'role' => $u->role ?? 'user',
                 ],
                 'listings' => $byUser[$ba->user_id] ?? [],
             ];
@@ -93,6 +104,26 @@ class BestAdvertiserController extends Controller
 
         return response()->json(['advertisers' => $out]);
     }
+    protected function castEavValueRow($attr)
+    {
+        return $attr->value_int
+            ?? $attr->value_decimal
+            ?? $attr->value_bool
+            ?? $attr->value_string
+            ?? $this->decodeJsonSafe($attr->value_json)
+            ?? $attr->value_date
+            ?? null;
+    }
+
+    protected function decodeJsonSafe($json)
+    {
+        if (is_null($json)) return null;
+        if (is_array($json)) return $json;
+
+        $x = json_decode($json, true);
+        return json_last_error() === JSON_ERROR_NONE ? $x : $json;
+    }
+
 
 
     //--------------------------------------------Admin Endpoints
@@ -128,7 +159,7 @@ class BestAdvertiserController extends Controller
         });
 
         [$ba, $message] = DB::transaction(function () use ($data, $limit) {
-            
+
             $ba = BestAdvertiser::where('user_id', $data['user_id'])->lockForUpdate()->first();
 
             $wasActive    = (bool) ($ba->is_active ?? false);

@@ -23,7 +23,6 @@ class ListingService
             }
 
             $common = Arr::only($data, [
-                'title',
                 'price',
                 'description',
                 'governorate_id',
@@ -35,11 +34,6 @@ class ListingService
                 'images',
                 'status',
                 'published_at',
-                'plan_type',
-                'contact_phone',
-                'whatsapp_phone',
-                'make_id',
-                'model_id',
                 'rank',
                 'country_code',
             ]);
@@ -67,9 +61,7 @@ class ListingService
             }
 
             $listing->update(Arr::only($data, [
-                'title',
                 'price',
-                'currency',
                 'description',
                 'governorate_id',
                 'city_id',
@@ -79,12 +71,7 @@ class ListingService
                 'main_image',
                 'images',
                 'status',
-                'plan_type',
                 'published_at',
-                'contact_phone',
-                'whatsapp_phone',
-                'make_id',
-                'model_id',
                 'rank',
                 'country_code',
             ]));
