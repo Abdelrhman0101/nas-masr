@@ -92,6 +92,7 @@ class UserController extends Controller
     {
         $user = $request->user();
         $slug = $request->query('category_slug');
+        $status=$request->query('status');
         $categoryId = null;
         // $supportsMakeModel = false;
 
@@ -104,7 +105,7 @@ class UserController extends Controller
         // Build query
         $q = Listing::query()
             ->where('user_id', $user->id)
-            ->where('status', 'Valid')
+            // ->where('status', 'Valid')
             ->orderBy('rank', 'desc')
             ->orderBy('published_at', 'desc')
             ->orderBy('id', 'desc')
@@ -112,6 +113,9 @@ class UserController extends Controller
 
         if ($categoryId) {
             $q->where('category_id', $categoryId);
+        }
+        if($status){
+            $q->where('status',$status);
         }
 
         // if ($supportsMakeModel) {
@@ -210,6 +214,13 @@ class UserController extends Controller
                 'listings.title',
                 'listings.main_image',
                 'listings.status',
+                'listings.price',
+                'listings.address',
+                'listings.contact_phone',
+                'listings.whatsapp_phone',
+                'listings.country_code',
+                'listings.plan_type',
+
                 'listings.created_at',
                 'categories.name as category_name',
                 'categories.slug as category_slug',
@@ -234,6 +245,12 @@ class UserController extends Controller
                 'image'        => $row['main_image'],
                 'section'      => $row['category_name'],
                 'section_slug' => $row['category_slug'],
+                'price'        => $row['price'],
+                'address'      => $row['address'],
+                'contact_phone'=> $row['contact_phone'],
+                'whatsapp_phone'=> $row['whatsapp_phone'],
+                'country_code'=> $row['country_code'],
+                'plan_type'=> $row['plan_type'],
                 'status'       => $mapStatus($row['status']),
                 'published_at' => $row['created_at'] ? (string) $row['created_at'] : null,
             ])->values();
@@ -252,6 +269,12 @@ class UserController extends Controller
             'image'        => $row['main_image'],
             'section'      => $row['category_name'],
             'section_slug' => $row['category_slug'],
+            'price'        => $row['price'],
+            'address'      => $row['address'],
+            'contact_phone'=> $row['contact_phone'],
+            'whatsapp_phone'=> $row['whatsapp_phone'],
+            'country_code'=> $row['country_code'],
+            'plan_type'=> $row['plan_type'],
             'status'       => $mapStatus($row['status']),
             'published_at' => $row['created_at'] ? (string) $row['created_at'] : null,
         ])->values();
