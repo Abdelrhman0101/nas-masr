@@ -44,7 +44,7 @@ class BestAdvertiserController extends Controller
             SELECT l.*,
                 ROW_NUMBER() OVER (
                     PARTITION BY user_id
-                    ORDER BY l.rank DESC, l.published_at DESC, l.created_at DESC
+                    ORDER BY l.rank ASC, l.published_at DESC, l.created_at DESC
                 ) rn
             FROM listings l
             WHERE l.category_id = ?
@@ -94,6 +94,8 @@ class BestAdvertiserController extends Controller
                     'city'           => $cityName,
                     'price'          => $listing->price,
                     'attributes'     => $attrs,
+                    'rank'           => $listing->rank,
+                    'views'          => $listing->views,
 
                     // ✅ الكاتيجري بالإنجليزي (slug) وبالعربي (name)
                     'category'       => $catSlug,

@@ -90,7 +90,7 @@ class Listing extends Model
 
     public function scopeByRank(Builder $query)
     {
-        return $query->orderBy('rank', 'desc');
+        return $query->orderBy('rank', 'asc');
     }
 
     public function incrementViews(): void

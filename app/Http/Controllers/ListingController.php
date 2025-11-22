@@ -45,7 +45,7 @@ class ListingController extends Controller
             ->forSection($sec)
             ->with($with)
             ->active()
-            ->orderByDesc('rank')
+            ->orderBy('rank', 'asc')
             ->keyword($request->query('q'))
             ->filterGovernorate($request->query('governorate_id'), $request->query('governorate'))
             ->filterCity($request->query('city_id'), $request->query('city'))
@@ -113,7 +113,8 @@ class ListingController extends Controller
                 'main_image_url'  => $item->main_image ? asset('storage/' . $item->main_image) : null,
                 'created_at'      => $item->created_at,
                 'plan_type'       => $item->plan_type,
-
+                'views'           => $item->views,
+                'rank'            => $item->rank,
                 // الكاتيجري
                 'category'        => $categorySlug,   // slug
                 'category_name'   => $categoryName,   // الاسم
@@ -159,11 +160,10 @@ class ListingController extends Controller
         $data = $request->validated();
 
         $sec = Section::fromSlug($section);
-        $packageResult = $this->consumeForPlan($request->user()->id, $data['plan_type']);
-
 
         if ($data['plan_type'] != 'free') {
-            if(!$packageResult['success']){
+            $packageResult = $this->consumeForPlan($request->user()->id, $data['plan_type']);
+            if (!$packageResult['success']) {
                 return response()->json($packageResult);
             }
         }
