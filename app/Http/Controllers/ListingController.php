@@ -204,6 +204,7 @@ class ListingController extends Controller
 
         $listing = $service->create($sec, $data, $user->id);
         $user->role = 'advertiser';
+        $user->save();
 
         return new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model']));
     }
@@ -217,10 +218,25 @@ class ListingController extends Controller
         return new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model']));
     }
 
-    public function update(string $section, GenericListingRequest $request, Listing $listing, ListingService $service): ListingResource
+    protected function userIsAdmin($user): bool
+    {
+        return $user->role=='admin';
+    }
+
+    public function update(string $section, GenericListingRequest $request, Listing $listing, ListingService $service)
     {
         $sec = Section::fromSlug($section);
         abort_if($listing->category_id !== $sec->id(), 404);
+
+        $user = $request->user();
+        $isOwner = $listing->user_id === ($user->id);
+        $isAdmin = $this->userIsAdmin($user);
+
+        if (!$isOwner && !$isAdmin) {
+            return response()->json([
+                'message' => 'غير مصرح لك بتعديل هذا الإعلان.'
+            ], 403);
+        }
 
         $data = $request->validated();
 
@@ -245,11 +261,20 @@ class ListingController extends Controller
         $sec = Section::fromSlug($section);
         abort_if($listing->category_id !== $sec->id(), 404);
 
+        $user = request()->user();
+        $isOwner = $listing->user_id === ($user->id ?? null);
+        $isAdmin = $this->userIsAdmin($user);
+
+        if (!$isOwner && !$isAdmin) {
+            return response()->json([
+                'message' => 'غير مصرح لك بحذف هذا الإعلان.'
+            ], 403);
+        }
+
         $listing->delete();
 
         return response()->json(['ok' => true]);
     }
-
     protected function storeUploaded($file, string $section, string $bucket = 'main'): string
     {
         $datePath = now()->format('Y/m');

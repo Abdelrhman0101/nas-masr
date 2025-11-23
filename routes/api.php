@@ -54,7 +54,7 @@ Route::prefix('v1/{section}')->group(function () {
     // Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
 
     Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
-    Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy']);
     });
 });
@@ -119,4 +119,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-packages', [UserController::class, 'myPackages']);
     Route::post('/create-agent-code', [UserController::class, 'storeAgent']);
     Route::get('/all-clients', [UserController::class, 'allClients']);
+    Route::post('/set-rank-one', [UserController::class, 'SetRankOne']);
 });

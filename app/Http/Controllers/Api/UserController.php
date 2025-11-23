@@ -144,104 +144,110 @@ class UserController extends Controller
         $user = $request->user();
         $pkg  = UserPackages::where('user_id', $user->id)->first();
 
-        $makeCardLite = function (string $titleAr, bool $active, ?\Illuminate\Support\Carbon $expiresAt): array {
+        $makeCardLite = function (string $titleAr, bool $active, ?Carbon $expiresAt, ?int $days, int $total): array {
             return [
-                'title'              => $titleAr,
-                'badge_text'         => $active ? 'نشط' : 'منتهي',
-                'expires_at_human'   => $expiresAt?->translatedFormat('d/m/Y'),
-                'note'               => $expiresAt
-                    ? 'تنتهي صلاحية الإعلانات والباقة بتاريخ ' . $expiresAt->translatedFormat('d/m/Y')
-                    : null,
+                'title'            => $titleAr,
+                'badge_text'       => $active ? 'نشط' : 'منتهي',
+                'expires_at_human' => $expiresAt?->translatedFormat('d/m/Y'),
+                'note'             => $expiresAt
+                    ? ('تنتهي صلاحية الباقة بتاريخ ' . $expiresAt->translatedFormat('d/m/Y'))
+                    : (
+                        // لو الباقة بدون مدة (days = 0) وفيها رصيد، مفيش تاريخ انتهاء
+                        ($days === 0 && $total > 0)
+                        ? 'باقة بدون مدة — تعتمد على الرصيد فقط'
+                        : null
+                    ),
             ];
         };
 
         if (!$pkg) {
             return response()->json([
                 'packages' => [
-                    $makeCardLite('الباقة المتميزة', false, null),
-                    $makeCardLite('الباقة الاستاندرد', false, null),
+                    $makeCardLite('الباقة المتميزة', false, null, null, 0),
+                    $makeCardLite('الباقة القياسية', false, null, null, 0),
                 ],
             ]);
         }
 
-        $exp = $pkg->expire_date instanceof Carbon
-            ? $pkg->expire_date
-            : ($pkg->expire_date ? Carbon::parse($pkg->expire_date) : null);
+        // بيانات الـ featured
+        $featuredActive = (bool) $pkg->featured_active;                 // من الـ accessor بعد التعديلات
+        $featuredExp    = $pkg->featured_expire_date;                   // Carbon|null
+        $featuredDays   = (int) ($pkg->featured_days ?? 0);
+        $featuredTotal  = (int) ($pkg->featured_ads ?? 0);
 
-        $isActive = ($exp === null) || $exp->isFuture();
+        // بيانات الـ standard
+        $standardActive = (bool) $pkg->standard_active;
+        $standardExp    = $pkg->standard_expire_date;
+        $standardDays   = (int) ($pkg->standard_days ?? 0);
+        $standardTotal  = (int) ($pkg->standard_ads ?? 0);
 
         return response()->json([
             'packages' => [
-                $makeCardLite('الباقة المتميزة', $isActive && $pkg->featured_ads_remaining > 0, $exp),
-                $makeCardLite('الباقة الاستاندرد', $isActive && $pkg->standard_ads_remaining > 0, $exp),
+                $makeCardLite('الباقة المتميزة', $featuredActive, $featuredExp, $featuredDays, $featuredTotal),
+                $makeCardLite('الباقة القياسية', $standardActive, $standardExp, $standardDays, $standardTotal),
             ],
         ]);
     }
 
-    //   public function makeRankOne(Request $request)
-    // {
-    //     $validated = $request->validate([
-    //         'category' => ['required', 'string'], // slug
-    //         'ad_id'    => ['required', 'integer'],
-    //     ]);
+    public function SetRankOne(Request $request)
+    {
+        $validated = $request->validate([
+            'category' => ['required', 'string'], // slug
+            'ad_id'    => ['required', 'integer'],
+        ]);
 
-    //     // حدد القسم من الـ slug
-    //     $sec = Section::fromSlug($validated['category']);
-    //     $categoryId = $sec->id();
+        $sec = Section::fromSlug($validated['category']);
+        $categoryId = $sec->id();
 
-    //     // هات الإعلان وتأكد إنه تبع نفس القسم
-    //     $ad = Listing::where('id', $validated['ad_id'])
-    //         ->where('category_id', $categoryId)
-    //         ->first();
+        $ad = Listing::where('id', $validated['ad_id'])
+            ->where('category_id', $categoryId)
+            ->first();
 
-    //     if (!$ad) {
-    //         return response()->json([
-    //             'status'  => false,
-    //             'message' => 'الإعلان غير موجود في هذا القسم.',
-    //         ], 404);
-    //     }
+        if (!$ad) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'الإعلان غير موجود في هذا القسم.',
+            ], 404);
+        }
 
-    //     // السماح فقط لمالك الإعلان (أو أدمن لو حابب تضيف سماحية)
-    //     $user = $request->user();
-    //     if ($ad->user_id !== ($user->id ?? null)) {
-    //         return response()->json([
-    //             'status'  => false,
-    //             'message' => 'لا يمكنك تعديل ترتيب إعلان لا تملكه.',
-    //         ], 403);
-    //     }
+        $user = $request->user();
+        if ($ad->user_id !== ($user->id ?? null)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'لا يمكنك تعديل ترتيب إعلان لا تملكه.',
+            ], 403);
+        }
 
-    //     // كاش/كوول-داون: مرة كل 24 ساعة لنفس (user, category, ad)
-    //     $cooldownHours = 24;
-    //     $cacheKey = "rank1:{$user->id}:cat{$categoryId}:ad{$ad->id}";
-    //     if (Cache::has($cacheKey)) {
-    //         $expiresAtTs = Cache::get($cacheKey);
-    //         $remaining   = max(0, $expiresAtTs - now()->timestamp);
-    //         $hrs         = (int) ceil($remaining / 3600);
+        $cooldownHours = 24;
+        $cacheKey = "rank1:{$user->id}:cat{$categoryId}:ad{$ad->id}";
+        if (Cache::has($cacheKey)) {
+            $expiresAtTs = Cache::get($cacheKey);
+            $remaining   = max(0, $expiresAtTs - now()->timestamp);
+            $hrs         = (int) ceil($remaining / 3600);
 
-    //         return response()->json([
-    //             'status'  => false,
-    //             'message' => "يمكنك رفع الإعلان مرة كل 24 ساعة. المُتبقي تقريبًا: {$hrs} ساعة.",
-    //         ], 429);
-    //     }
+            return response()->json([
+                'status'  => false,
+                'message' => "يمكنك رفع الإعلان مرة كل 24 ساعة. المُتبقي تقريبًا: {$hrs} ساعة.",
+            ], 429);
+        }
 
 
-    //     $ok = $this->makeRankOne($categoryId, $ad->id);
-    //     if (!$ok) {
-    //         return response()->json([
-    //             'status'  => false,
-    //             'message' => 'حدث خطأ أثناء تحديث الترتيب.',
-    //         ], 500);
-    //     }
+        $ok = $this->makeRankOne($categoryId, $ad->id);
+        if (!$ok) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'حدث خطأ أثناء تحديث الترتيب.',
+            ], 500);
+        }
 
-    //     // ثبت الكوول-داون
-    //     $expires = now()->addHours($cooldownHours);
-    //     Cache::put($cacheKey, $expires->timestamp, $expires);
+        $expires = now()->addHours($cooldownHours);
+        Cache::put($cacheKey, $expires->timestamp, $expires);
 
-    //     return response()->json([
-    //         'status'  => true,
-    //         'message' => "تم رفع الإعلان #{$ad->id} إلى الترتيب الأول في قسم {$sec->name}.",
-    //     ]);
-    // }
+        return response()->json([
+            'status'  => true,
+            'message' => "تم رفع الإعلان #{$ad->id} إلى الترتيب الأول في قسم {$sec->name}.",
+        ]);
+    }
 
     public function logout(Request $request)
     {
@@ -298,12 +304,10 @@ class UserController extends Controller
     {
         $user->loadCount('listings');
 
-        // params
         $singleSlug  = $request->query('category_slug') ?? $request->query('slug');
         $multiSlugs  = $request->query('category_slugs') ?? $request->query('slugs'); // "a,b,c"
         $statusFilter = $request->query('status'); // Valid / Pending / Rejected / Expired
 
-        // جهّز مصفوفة slugs
         $slugs = [];
         if ($singleSlug) {
             $slugs[] = trim($singleSlug);
@@ -313,7 +317,6 @@ class UserController extends Controller
             $slugs  = array_values(array_filter(array_merge($slugs, $extra)));
         }
 
-        // نفس منطق الاستعلام، مع eager-load للعلاقات المطلوبة
         $query = Listing::query()
             ->leftJoin('categories', 'listings.category_id', '=', 'categories.id')
             ->with(['attributes', 'governorate', 'city', 'make', 'model'])
@@ -324,6 +327,8 @@ class UserController extends Controller
                 'listings.id',
                 'listings.category_id',
                 'listings.main_image',
+                'listings.make_id',
+                'listings.model_id',
                 'listings.price',
                 'listings.rank',
                 'listings.views',
@@ -340,12 +345,9 @@ class UserController extends Controller
             ])
             ->orderByDesc('listings.created_at');
 
-        // بدون Pagination: رجّع الكل
         $rows = $query->get();
 
-        // حوِّل لكل عنصر الـ minimal payload المطلوب + category بالعربي/الإنجليزي
         $items = $rows->map(function ($row) {
-            // attributes كاملة (EAV)
             $attrs = [];
             if ($row->relationLoaded('attributes')) {
                 foreach ($row->attributes as $attr) {
@@ -407,7 +409,7 @@ class UserController extends Controller
         return response()->json([
             // 'user'     => $this->formatUserSummary($user),
             'listings' => $items,
-            'meta'     => ['total' => $items->count()], // بدون pagination
+            'meta'     => ['total' => $items->count()],
         ]);
     }
 
@@ -517,10 +519,13 @@ class UserController extends Controller
 
     public function storeAgent(Request $request)
     {
+        $user = request()->user();
         $code = UserClient::create([
-            'user_id' => request()->user()->id,
+            'user_id' => $user->id,
             // 'client_code'=>strtoupper(Str::random(10)),
         ]);
+        $user->role = 'representative';
+        $user->save();
 
         return response()->json([
             'message' => 'Agent code created successfully',

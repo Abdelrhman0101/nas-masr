@@ -12,10 +12,19 @@ class UserPackages extends Model
 
     protected $fillable = [
         'user_id',
+
         'featured_ads',
-        'standard_ads',
         'featured_ads_used',
+        'standard_ads',
         'standard_ads_used',
+
+        'featured_days',
+        'featured_start_date',
+        'featured_expire_date',
+        'standard_days',
+        'standard_start_date',
+        'standard_expire_date',
+
         'days',
         'start_date',
         'expire_date',
@@ -23,9 +32,18 @@ class UserPackages extends Model
 
     protected $casts = [
         'featured_ads' => 'integer',
-        'standard_ads' => 'integer',
         'featured_ads_used' => 'integer',
+        'standard_ads' => 'integer',
         'standard_ads_used' => 'integer',
+
+        'featured_days' => 'integer',
+        'featured_start_date' => 'datetime',
+        'featured_expire_date' => 'datetime',
+
+        'standard_days' => 'integer',
+        'standard_start_date' => 'datetime',
+        'standard_expire_date' => 'datetime',
+
         'days' => 'integer',
         'start_date' => 'datetime',
         'expire_date' => 'datetime',
@@ -34,7 +52,9 @@ class UserPackages extends Model
     protected $appends = [
         'featured_ads_remaining',
         'standard_ads_remaining',
-        'active',
+        'featured_active',
+        'standard_active',
+        // 'active', 
     ];
 
     public function user(): BelongsTo
@@ -51,49 +71,67 @@ class UserPackages extends Model
 
     public function getFeaturedAdsRemainingAttribute(): int
     {
-        $total = (int) ($this->featured_ads ?? 0);
-        $used = (int) ($this->featured_ads_used ?? 0);
-        return max(0, $total - $used);
+        return max(0, (int)$this->featured_ads - (int)$this->featured_ads_used);
     }
 
     public function getStandardAdsRemainingAttribute(): int
     {
-        $total = (int) ($this->standard_ads ?? 0);
-        $used = (int) ($this->standard_ads_used ?? 0);
-        return max(0, $total - $used);
+        return max(0, (int)$this->standard_ads - (int)$this->standard_ads_used);
     }
+
+    // UserPackages.php
+
+    public function getFeaturedActiveAttribute(): bool
+    {
+        $timeOk = $this->featured_expire_date
+            ? $this->featured_expire_date->isFuture()
+            : ((int)$this->featured_days === 0); // بدون مدة = مفيش انتهاء زمني
+        return $timeOk && $this->featured_ads_remaining > 0;
+    }
+
+    public function getStandardActiveAttribute(): bool
+    {
+        $timeOk = $this->standard_expire_date
+            ? $this->standard_expire_date->isFuture()
+            : ((int)$this->standard_days === 0);
+        return $timeOk && $this->standard_ads_remaining > 0;
+    }
+
 
     public function getActiveAttribute(): bool
     {
-        if ($this->expire_date === null) {
-            return true;
+        return (bool) $this->featured_active || (bool) $this->standard_active;
+    }
+
+
+    public function startPlanNow(string $plan, ?int $days = null): void
+    {
+        $plan = strtolower($plan);
+        if ($plan === 'featured') {
+            $d = $days ?? (int)$this->featured_days;
+            $this->featured_start_date = now();
+            $this->featured_expire_date = $d > 0 ? now()->copy()->addDays($d) : null;
+        } elseif ($plan === 'standard') {
+            $d = $days ?? (int)$this->standard_days;
+            $this->standard_start_date = now();
+            $this->standard_expire_date = $d > 0 ? now()->copy()->addDays($d) : null;
         }
-        return $this->expire_date->isFuture();
+        $this->save();
     }
 
     public function consumeFeatured(): bool
     {
-        if ($this->featured_ads_remaining <= 0) {
-            return false;
-        }
+        if (!$this->featured_active) return false;
+        if ($this->featured_ads_remaining <= 0) return false;
         $this->increment('featured_ads_used');
         return true;
     }
 
     public function consumeStandard(): bool
     {
-        if ($this->standard_ads_remaining <= 0) {
-            return false;
-        }
+        if (!$this->standard_active) return false;
+        if ($this->standard_ads_remaining <= 0) return false;
         $this->increment('standard_ads_used');
         return true;
-    }
-
-    public function startNow(int $days): void
-    {
-        $this->start_date = now();
-        $this->expire_date = now()->addDays($days);
-        $this->days = $days;
-        $this->save();
     }
 }

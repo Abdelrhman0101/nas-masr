@@ -34,7 +34,8 @@ class User extends Authenticatable
         'address',
         'country_code',
         'otp',
-        'otp_verified_at'
+        'otp_verified_at',
+        'role',
     ];
 
     /**

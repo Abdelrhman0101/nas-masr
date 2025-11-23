@@ -49,51 +49,117 @@ class PackagesController extends Controller
      */
     public function storeOrUpdate(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'user_id'       => ['required', 'integer', 'exists:users,id'],
-            'featured_ads'  => ['nullable', 'integer', 'min:0'],
-            'standard_ads'  => ['nullable', 'integer', 'min:0'],
-            'days'          => ['nullable', 'integer', 'min:1'],
+        $v = $request->validate([
+            'user_id'            => ['required', 'integer', 'exists:users,id'],
+
+            'featured_ads'       => ['nullable', 'integer', 'min:0'],
+            'standard_ads'       => ['nullable', 'integer', 'min:0'],
+
+            'featured_days'      => ['nullable', 'integer', 'min:0'],
+            'standard_days'      => ['nullable', 'integer', 'min:0'],
+
+            // اختياري: إعادة تشغيل فوري لو عايز
+            'start_featured_now' => ['nullable', 'boolean'],
+            'start_standard_now' => ['nullable', 'boolean'],
         ]);
 
-        $user = User::find($validated['user_id']);
+        $user = User::find($v['user_id']);
         if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found ❌',
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'User not found ❌'], 404);
         }
 
-        $package = UserPackages::where('user_id', $user->id)->orderByDesc('id')->first();
+        $pkg = UserPackages::firstOrNew(['user_id' => $user->id]);
 
-        $days       = $validated['days'] ?? 30;
-        $expireDate = now()->addDays($days);
+        $touchedFeatured = array_key_exists('featured_ads', $v)
+            || array_key_exists('featured_days', $v)
+            || array_key_exists('start_featured_now', $v);
 
-        if ($package) {
-            // Update
-            $package->update([
-                'featured_ads' => $validated['featured_ads'] ?? $package->featured_ads,
-                'standard_ads' => $validated['standard_ads'] ?? $package->standard_ads,
-                'days'         => $days,
-                'expire_date'  => $expireDate,
-            ]);
-        } else {
-            $package = UserPackages::create([
-                'user_id'      => $user->id,
-                'featured_ads' => $validated['featured_ads'] ?? 0,
-                'standard_ads' => $validated['standard_ads'] ?? 0,
-                'days'         => $days,
-                'start_date'   => now(),
-                'expire_date'  => $expireDate,
-            ]);
+        $touchedStandard = array_key_exists('standard_ads', $v)
+            || array_key_exists('standard_days', $v)
+            || array_key_exists('start_standard_now', $v);
+
+        if ($touchedFeatured) {
+            $this->applyPlanUpdate(
+                $pkg,
+                'featured',
+                $v['featured_ads']  ?? null,
+                $v['featured_days'] ?? null,
+                (bool)($v['start_featured_now'] ?? false)
+            );
         }
+
+        if ($touchedStandard) {
+            $this->applyPlanUpdate(
+                $pkg,
+                'standard',
+                $v['standard_ads']  ?? null,
+                $v['standard_days'] ?? null,
+                (bool)($v['start_standard_now'] ?? false)
+            );
+        }
+
+        // ملحوظة: إحنا مش بنلمس الخطة التانية لو مش “touched”
+        $pkg->save();
 
         return response()->json([
             'success' => true,
             'message' => 'Package assigned/updated successfully ✅',
-            'data'    => $package->refresh(),
+            'data'    => $pkg->refresh(),
         ]);
     }
+
+    /**
+     * تحديث خطة واحدة (featured|standard) بمنطق واضح:
+     * - لو ads==0 ⇒ Reset كامل للخطة.
+     * - لو days اتغيرت، بنحدّثها بس من غير تغيير start/expire إلا لو startNow=true.
+     * - Autostart تلقائي لو مفيش start_date قبل كده وكان فيه رصيد > 0.
+     */
+    protected function applyPlanUpdate(UserPackages $pkg, string $plan, ?int $ads, ?int $days, bool $startNow): void
+    {
+        $plan = strtolower($plan); // featured|standard
+
+        $adsField    = "{$plan}_ads";
+        $usedField   = "{$plan}_ads_used";
+        $daysField   = "{$plan}_days";
+        $startField  = "{$plan}_start_date";
+        $expireField = "{$plan}_expire_date";
+
+        // 1) عدّل الرصيد
+        if ($ads !== null) {
+            $ads = max(0, $ads);
+            $pkg->{$adsField} = $ads;
+
+            if ($ads === 0) {
+                // Reset كامل للخطة
+                $pkg->{$usedField}   = 0;
+                $pkg->{$daysField}   = 0;
+                $pkg->{$startField}  = null;
+                $pkg->{$expireField} = null;
+                return; // انتهينا من الخطة دي
+            }
+        }
+
+        // 2) عدّل الأيام (من غير ما تغيّر التواريخ لوحدها)
+        if ($days !== null) {
+            $pkg->{$daysField} = max(0, $days);
+        }
+
+        // 3) تشغيل/إعادة تشغيل
+        $hasStart   = !empty($pkg->{$startField});
+        $daysVal    = (int)($pkg->{$daysField} ?? 0);
+        $adsVal     = (int)($pkg->{$adsField} ?? 0);
+
+        // Autostart: لو مفيش start قبل كده وفيه رصيد
+        $shouldAutostart = !$hasStart && $adsVal > 0;
+
+        if ($startNow || $shouldAutostart) {
+            $pkg->{$startField}  = now();
+            $pkg->{$expireField} = $daysVal > 0 ? now()->copy()->addDays($daysVal) : null;
+        }
+    }
+
+
+
 
 
     /**
