@@ -14,6 +14,8 @@ use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\Admin\StatsController;
 use App\Http\Controllers\BestAdvertiserController;
 use App\Models\Listing as ListingModel;
+use App\Http\Controllers\Admin\GovernorateController;
+use App\Http\Controllers\Admin\MakeController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('v1/test', fn() => response()->json(['ok' => true]));
@@ -22,6 +24,10 @@ Route::get('v1/test', fn() => response()->json(['ok' => true]));
 Route::get('category-fields', [CategoryFieldsController::class, 'index']);
 // Public Categories Route
 Route::get('categories', [categoryController::class, 'index']);
+//public governorates routes
+Route::get('governorates', [GovernorateController::class, 'index']);
+//public makes routes
+Route::get('makes', [MakeController::class, 'index']);
 
 Route::get('/system-settings', [SystemSettingController::class, 'index']);
 
@@ -65,7 +71,7 @@ Route::prefix('admin')
     ->group(function () {
         // Category Fields Routes
         Route::post('category-fields', [CategoryFieldsController::class, 'store']);
-        Route::put('category-fields/{categoryField}', [CategoryFieldsController::class, 'update']);
+        Route::post('category-fields/{categoryField}', [CategoryFieldsController::class, 'update']);
         Route::delete('category-fields/{categoryField}', [CategoryFieldsController::class, 'destroy']);
 
         // Category Routes
@@ -101,6 +107,24 @@ Route::prefix('admin')
         Route::post('/system-settings', [SystemSettingController::class, 'store']);
         //User packages
         Route::post('/user-packages', [PackagesController::class, 'storeOrUpdate']);
+
+
+        Route::post('governorates', [GovernorateController::class, 'store']);
+        Route::put('governorates/{governorate}', [GovernorateController::class, 'update']);
+        Route::delete('governorates/{governorate}', [GovernorateController::class, 'destroy']);
+        Route::get('governorates/{governorate}/cities', [GovernorateController::class, 'cities']);
+        Route::post('governorates/{governorate}/cities', [GovernorateController::class, 'addCity']);
+        Route::put('cities/{city}', [GovernorateController::class, 'updateCity']);
+        Route::delete('cities/{city}', [GovernorateController::class, 'deleteCity']);
+
+
+        Route::post('makes', [MakeController::class, 'store']);
+        Route::put('makes/{make}', [MakeController::class, 'update']);
+        Route::delete('makes/{make}', [MakeController::class, 'destroy']);
+        Route::get('makes/{make}/models', [MakeController::class, 'models']);
+        Route::post('makes/{make}/models', [MakeController::class, 'addModel']);
+        Route::put('models/{model}', [MakeController::class, 'updateModel']);
+        Route::delete('models/{model}', [MakeController::class, 'deleteModel']);
     });
 
 Route::get('/all-cars', [CarController::class, 'index']);

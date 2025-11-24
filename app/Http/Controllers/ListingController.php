@@ -224,7 +224,7 @@ class ListingController extends Controller
 
         $userPayload = [
             'id'               => $owner?->id,
-            'name'             => $owner?->name,
+            'name'             => $owner?->name??"advertiser",
             'joined_at'        => $owner?->created_at?->toIso8601String(),
             'joined_at_human'  => $owner?->created_at?->diffForHumans(),
             'listings_count'   => $adsCount,

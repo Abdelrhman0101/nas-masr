@@ -19,14 +19,14 @@ class UpdateCategoryFieldRequest extends FormRequest
         return [
             'category_slug' => ['sometimes', 'string', 'max:100'],
             'field_name' => [
-                'sometimes',
+                'required',
                 'string',
                 'max:100',
-                Rule::unique('category_fields', 'field_name')->ignore($id),
+                // Rule::unique('category_fields', 'field_name')->ignore($id),
             ],
             'display_name' => ['sometimes', 'string', 'max:150'],
             'type' => ['sometimes', 'string', 'in:string,int,decimal,bool,date,json'],
-            'options' => ['nullable', 'array'],
+            'options' => ['required', 'array'],
             'required' => ['sometimes', 'boolean'],
             'filterable' => ['sometimes', 'boolean'],
             'rules_json' => ['nullable', 'array'],

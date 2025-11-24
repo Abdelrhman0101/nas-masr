@@ -49,7 +49,6 @@ class GenericListingRequest extends FormRequest
                 }
             }
 
-            // plan_type في التعديل اختياري
             $rules['plan_type'] = ['sometimes', 'string', 'in:standard,premium,featured,free'];
         }
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Arr;
+use Illuminate\Validation\ValidationException;
 use App\Http\Requests\Admin\StoreCategoryFieldRequest;
 use App\Http\Requests\Admin\UpdateCategoryFieldRequest;
 use App\Models\Category;
@@ -75,21 +77,43 @@ class CategoryFieldsController extends Controller
     }
 
     // PUT /api/admin/category-fields/{id}
-    public function update(UpdateCategoryFieldRequest $request, CategoryField $categoryField)
+    public function update(UpdateCategoryFieldRequest $request, $categorySlug)
     {
         $data = $request->validated();
 
-        if (isset($data['options']) && empty($data['options'])) {
-            $data['options'] = [];
+        $field = CategoryField::where('category_slug', $categorySlug)
+            ->where('field_name', $data['field_name'])
+            ->first();
+
+        if (! $field) {
+            throw ValidationException::withMessages([
+                'field_name' => ['الحقل المطلوب غير موجود في هذا القسم.'],
+            ]);
         }
 
-        $categoryField->update($data);
+        if (isset($data['options']) && is_array($data['options'])) {
+
+            $clean = [];
+            foreach ($data['options'] as $opt) {
+                $value = trim((string) $opt);
+                if ($value !== '') {
+                    $clean[] = $value;
+                }
+            }
+
+            $data['options'] = array_values(array_unique($clean));
+        }
+
+        unset($data['field_name']);
+
+        $field->update($data);
 
         return response()->json([
             'message' => 'تم تحديث الحقل بنجاح',
-            'data' => $categoryField,
+            'data'    => $field->fresh(),
         ]);
     }
+
 
     public function destroy(CategoryField $categoryField)
     {
