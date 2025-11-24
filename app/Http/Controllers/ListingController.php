@@ -171,9 +171,9 @@ class ListingController extends Controller
 
         if ($data['plan_type'] != 'free') {
             $packageResult = $this->consumeForPlan($request->user()->id, $data['plan_type']);
-            if (!$packageResult['success']) {
-                return response()->json($packageResult);
-            }
+            // if (!$packageResult['success']) {
+            //     return response()->json($packageResult);
+            // }
         }
 
 
@@ -218,17 +218,21 @@ class ListingController extends Controller
 
 
         $listing->increment('views');
-
+        $banner = null;
+        if ($sec->slug == "real_estate") {
+            $banner = "storage/uploads/banner/796c4c36d93281ccfb0cac71ed31e5d1b182ae79.png";
+        };
 
         $owner =    User::select('id', 'name', 'created_at')->find($listing->user_id);
         $adsCount = Listing::where('user_id', $listing->user_id)->count();
 
         $userPayload = [
             'id'               => $owner?->id,
-            'name'             => $owner?->name??"advertiser",
+            'name'             => $owner?->name ?? "advertiser",
             'joined_at'        => $owner?->created_at?->toIso8601String(),
             'joined_at_human'  => $owner?->created_at?->diffForHumans(),
             'listings_count'   => $adsCount,
+            'banner' => $banner
         ];
 
 

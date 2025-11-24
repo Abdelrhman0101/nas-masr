@@ -8,22 +8,22 @@ use Illuminate\Support\Carbon;
 
 trait PackageHelper
 {
-    public function consumeForPlan(int $userId, string $planType, int $count = 1): array
+    public function consumeForPlan(int $userId, string $planType, int $count = 1)
     {
         $planType = $this->normalizePlan($planType);
 
         $pkg = UserPackages::where('user_id', $userId)->first();
 
         if (!$pkg) {
-            return $this->fail('لا توجد باقة لهذا المستخدم.');
+            return response()->json([
+                'success' => false,
+                'message' => 'لا توجد باقة لهذا المستخدم.',
+            ], 404);
         }
-
-        // if ($pkg->expire_date instanceof Carbon && $pkg->expire_date->isPast()) {
-        //     return $this->fail('الباقة منتهية الصلاحية.');
-        // }
 
         [$totalField, $usedField, $daysField, $startField, $expireField, $title] = $this->mapFields($planType);
 
+        // لو مفيش تاريخ انتهاء = أول استخدام، نفعل الباقة
         if (empty($pkg->{$expireField})) {
             $days = (int) ($pkg->{$daysField} ?? 0);
             if ($days > 0) {
@@ -33,21 +33,30 @@ trait PackageHelper
             }
         }
 
+        // لو الباقة منتهية
         if ($pkg->{$expireField} instanceof Carbon && $pkg->{$expireField}->isPast()) {
-            return $this->fail("انتهت صلاحية {$title}.");
+            return response()->json([
+                'success' => false,
+                'message' => "انتهت صلاحية {$title}.",
+            ], 404);
         }
 
         $total  = (int) ($pkg->{$totalField} ?? 0);
         $used   = (int) ($pkg->{$usedField} ?? 0);
         $remain = max(0, $total - $used);
 
+        // رصيد غير كافي
         if ($remain < $count) {
-            return $this->fail("لا يوجد رصيد كافٍ في {$title} (المتبقي: {$remain}).");
+            return response()->json([
+                'success' => false,
+                'message' => "لا يوجد رصيد كافٍ في {$title} (المتبقي: {$remain}).",
+            ], 422);
         }
 
+        // خصم من الباقة
         $pkg->increment($usedField, $count);
 
-        return [
+        return response()->json([
             'success'     => true,
             'message'     => "تم خصم {$count} إعلان من {$title} ✅",
             'plan'        => $planType,
@@ -56,7 +65,7 @@ trait PackageHelper
             'remaining'   => max(0, $total - ($used + $count)),
             'expire_date' => $pkg->{$expireField},
             'package_id'  => $pkg->id,
-        ];
+        ], 200);
     }
 
 
