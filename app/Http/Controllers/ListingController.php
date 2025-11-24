@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -300,13 +301,36 @@ class ListingController extends Controller
         $datePath = now()->format('Y/m');
         $dir = "uploads/{$section}/{$datePath}/" . ($bucket === 'main' ? 'main' : 'gallery');
         $name = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
-        Storage::disk('public')->makeDirectory($dir);
-        $path = $file->storeAs($dir, $name, 'public');
+        try {
+            Storage::disk('public')->makeDirectory($dir);
+            $path = $file->storeAs($dir, $name, 'public');
+        } catch (\Throwable $e) {
+            Log::error('upload_store_exception', [
+                'section' => $section,
+                'bucket' => $bucket,
+                'dir' => $dir,
+                'name' => $name,
+                'error' => $e->getMessage(),
+            ]);
+            $field = $bucket === 'main' ? 'main_image' : 'images';
+            throw \Illuminate\Validation\ValidationException::withMessages([$field => ['فشل رفع الملف.']]);
+        }
         if (!$path) {
+            Log::error('upload_store_failed', [
+                'section' => $section,
+                'bucket' => $bucket,
+                'dir' => $dir,
+                'name' => $name,
+                'disk_root' => config('filesystems.disks.public.root'),
+            ]);
             $field = $bucket === 'main' ? 'main_image' : 'images';
             throw \Illuminate\Validation\ValidationException::withMessages([$field => ['فشل رفع الملف.']]);
         }
         if (!Storage::disk('public')->exists($path)) {
+            Log::error('upload_file_missing_after_store', [
+                'path' => $path,
+                'dir' => $dir,
+            ]);
             $field = $bucket === 'main' ? 'main_image' : 'images';
             throw \Illuminate\Validation\ValidationException::withMessages([$field => ['فشل حفظ الملف.']]);
         }

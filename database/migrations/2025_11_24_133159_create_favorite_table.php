@@ -11,9 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('favourite', function (Blueprint $table) {
+        Schema::create('favorite', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
+
+            $table->foreignId('ad_id')->constrained('listings')->cascadeOnDelete();;
+            $table->string('category_slug');
             $table->timestamps();
+
+            $table->unique(['user_id', 'ad_id']);
         });
     }
 
@@ -22,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('favourite');
+        Schema::dropIfExists('favorite');
     }
 };
