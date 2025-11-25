@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\BestAdvertiser;
 use App\Models\Category;
+use App\Models\Listing;
 use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class BestAdvertiserController extends Controller
 
     public function index(string $section)
     {
+        Listing::autoExpire();
         $sec = Section::fromSlug($section);
         $categoryId = $sec->id();
 
@@ -58,7 +60,7 @@ class BestAdvertiserController extends Controller
         $listingIds = collect($rows)->pluck('id')->all();
 
         // eager load
-        $listings = \App\Models\Listing::with([
+        $listings = Listing::with([
             'attributes',
             'make',
             'model',

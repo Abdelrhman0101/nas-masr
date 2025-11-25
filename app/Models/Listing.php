@@ -44,13 +44,13 @@ class Listing extends Model
     protected $casts = [
         'images' => 'array',
         'published_at' => 'datetime',
-        'expire_at'=>'datetime',
-        'admin_approved'=>'boolean',
+        'expire_at' => 'datetime',
+        'admin_approved' => 'boolean',
         'price' => 'decimal:2',
         'lat' => 'decimal:7',
         'lng' => 'decimal:7',
-        'views'=>'int',
-        'isPayment'=>'boolean',
+        'views' => 'int',
+        'isPayment' => 'boolean',
 
     ];
 
@@ -81,11 +81,27 @@ class Listing extends Model
         return $this->belongsTo(CarModel::class);
     }
 
+    public static function autoExpire(): int
+    {
+        return static::query()
+            ->where('status', 'Valid')
+            ->whereNotNull('expire_at')
+            ->where('expire_at', '<=', now())
+            ->update([
+                'status'    => 'Expired',
+                'isPayment' => false,
+            ]);
+    }
+
 
     public function scopeActive($query)
     {
-        return $query->where('status', 'Valid')
-            ->where('admin_approved', true);
+        return $query
+            ->where('status', 'Valid')
+            ->where(function ($q) {
+                $q->whereNull('expire_at')          
+                    ->orWhere('expire_at', '>', now());
+            });
     }
 
 
