@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\PackagesController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CarController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\FavoriteController;
 use App\Support\Section;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -145,4 +146,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/all-clients', [UserController::class, 'allClients']);
     Route::post('/set-rank-one', [UserController::class, 'SetRankOne']);
     Route::patch('/payment/{id}', [UserController::class, 'payment']);
+
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorite', [FavoriteController::class, 'toggle']);
 });

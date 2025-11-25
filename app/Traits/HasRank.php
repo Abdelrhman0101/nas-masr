@@ -26,6 +26,7 @@ trait HasRank
     public function makeRankOne($categoryId, $adId): bool
     {
         return DB::transaction(function () use ($categoryId, $adId) {
+
             DB::table('listings')
                 ->where('category_id', $categoryId)
                 ->select('id')
@@ -36,18 +37,19 @@ trait HasRank
                 ->where('category_id', $categoryId)
                 ->first();
 
-            if (!$listing) {
-                return false;
-            }
-
+            if (!$listing) return false;
 
             Listing::where('category_id', $categoryId)
                 ->where('id', '!=', $adId)
                 ->update([
-                    'rank' => DB::raw('COALESCE(rank, 0) + 1'),
+                    'rank'       => DB::raw('IFNULL(rank, 0) + 1'),
+                    'updated_at' => now(),
                 ]);
 
-            $listing->update(['rank' => 1]);
+            $listing->update([
+                'rank'       => 1,
+                'updated_at' => now(),
+            ]);
 
             return true;
         });
