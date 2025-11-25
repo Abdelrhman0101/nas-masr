@@ -144,4 +144,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/create-agent-code', [UserController::class, 'storeAgent']);
     Route::get('/all-clients', [UserController::class, 'allClients']);
     Route::post('/set-rank-one', [UserController::class, 'SetRankOne']);
+    Route::patch('/payment/{id}', [UserController::class, 'payment']);
 });

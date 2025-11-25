@@ -11,7 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        //
+        Schema::table('listings', function (Blueprint $table) {
+            $table->boolean('isPayment')->default(false);
+            $table->timestamp('expire_at')->nullable();
+        });
     }
 
     /**
@@ -19,6 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::table('listings', function (Blueprint $table) {
+            $table->dropColumn(['isPayment', 'expire_at']);
+        });
     }
 };

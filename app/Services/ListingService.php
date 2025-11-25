@@ -42,6 +42,8 @@ class ListingService
                 'make_id',
                 'admin_approved',
                 'model_id',
+                'expire_at',
+                'isPayment',
             ]);
 
             $listing = Listing::create($common + [
@@ -86,6 +88,8 @@ class ListingService
                 // 'admin_approved',
                 'make_id',
                 'model_id',
+                'expire_at',
+                'isPayment',
             ]));
 
             if (array_key_exists('attributes', $data)) {

@@ -99,6 +99,9 @@ final class Section
             'whatsapp_phone' => ['nullable', 'string', 'max:20'],
             'country_code' => ['nullable', 'string', 'max:20'],
             'admin_approved' => ['nullable', 'boolean'],
+            'expire_at' => ['nullable', 'date'],
+            'isPayment' => ['nullable', 'boolean'],
+
             // 'make_id' => ['nullable', 'integer', 'exists:makes,id'],
             // 'model_id' => ['nullable', 'integer', 'exists:models,id'],
             // 'make' => ['nullable', 'string'],

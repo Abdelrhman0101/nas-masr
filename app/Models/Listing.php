@@ -35,17 +35,23 @@ class Listing extends Model
         'rank',
         'country_code',
         'views',
-        'admin_approved'
+        'admin_approved',
+        'expire_at',
+        'isPayment'
+
     ];
 
     protected $casts = [
         'images' => 'array',
         'published_at' => 'datetime',
+        'expire_at'=>'datetime',
         'admin_approved'=>'boolean',
         'price' => 'decimal:2',
         'lat' => 'decimal:7',
         'lng' => 'decimal:7',
-        'views'=>'int'
+        'views'=>'int',
+        'isPayment'=>'boolean',
+
     ];
 
     /* ===================== العلاقات ===================== */

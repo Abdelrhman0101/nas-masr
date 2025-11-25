@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ListingResource;
 use App\Models\Listing;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\UserClient;
 use App\Models\UserPackages;
@@ -568,5 +569,55 @@ class UserController extends Controller
         $user->otp_verified = true;
         $user->save();
         return response()->json(['message' => 'Otp verified successfully']);
+    }
+
+
+
+    //payment
+    public function payment(Request $request, $id)
+    {
+        $userId = $request->user()->id;
+
+        $listing = Listing::where([
+            'id'      => $id,
+            'user_id' => $userId,
+        ])->first();
+
+        if (!$listing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ad not found',
+            ], 404);
+        }
+
+        if ($listing->isPayment) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Ad already paid',
+                'listing_id' => $listing->id,
+            ]);
+        }
+
+        $listing->isPayment = true;
+
+        $manualApprove = Cache::remember('settings:manual_approval', now()->addHours(6), function () {
+            $val = SystemSetting::where('key', 'manual_approval')->value('value');
+            return (int) $val === 1;
+        });
+
+        if (!$manualApprove) {
+            $listing->status        = 'Valid';
+            $listing->admin_approved = true;
+            $listing->published_at  = now();
+            $listing->expire_at     = now()->addDays(365);
+        }
+
+        $listing->save();
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'Payment done successfully',
+            'listing_id' => $listing->id,
+        ]);
     }
 }

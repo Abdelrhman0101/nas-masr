@@ -88,6 +88,8 @@ class ListingResource extends JsonResource
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'expire_at' => $this->expire_at??"قيد الانتظار",
+            'isPayment' => $this->isPayment,
         ];
     }
 

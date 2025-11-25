@@ -119,6 +119,8 @@ class GenericListingRequest extends FormRequest
             'model_id'         => 'الموديل',
             'make'             => 'الماركة',
             'model'            => 'الموديل',
+            'expire_at'        => 'تاريخ الانتهاء',
+            'isPayment'        => 'هل مدفوع',
         ];
 
         try {

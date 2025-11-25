@@ -12,6 +12,7 @@ use App\Support\Section;
 use App\Traits\HasRank;
 use App\Traits\PackageHelper;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -163,26 +164,16 @@ class ListingController extends Controller
     public function store(string $section, GenericListingRequest $request, ListingService $service)
     {
         $user = $request->user();
-        $sec = Section::fromSlug($section);
+        $sec  = Section::fromSlug($section);
         $data = $request->validated();
-
-        $sec = Section::fromSlug($section);
-
-
-        if ($data['plan_type'] != 'free') {
-            $packageResult = $this->consumeForPlan($request->user()->id, $data['plan_type']);
-            // if (!$packageResult['success']) {
-            //     return response()->json($packageResult);
-            // }
-        }
-
-
 
         $rank = $this->getNextRank(Listing::class, $sec->id());
         $data['rank'] = $rank;
+
         if ($request->hasFile('main_image')) {
             $data['main_image'] = $this->storeUploaded($request->file('main_image'), $section, 'main');
         }
+
         if ($request->hasFile('images')) {
             $stored = [];
             foreach ($request->file('images') as $file) {
@@ -190,25 +181,60 @@ class ListingController extends Controller
             }
             $data['images'] = $stored;
         }
+
         $manualApprove = Cache::remember('settings:manual_approval', now()->addHours(6), function () {
             $val = SystemSetting::where('key', 'manual_approval')->value('value');
-            return (int)$val === 1;
+            return (int) $val === 1;
         });
-        if ($manualApprove) {
-            $data['status'] = 'Pending';
-            $data['admin_approved'] = false;
-        } else {
-            $data['status']         = 'Valid';
-            $data['admin_approved'] = true;
-            $data['published_at']   = now();
+
+        $paymentRequired = false;
+        $packageData     = null;
+
+        if ($data['plan_type'] !== 'free') {
+            $packageResult = $this->consumeForPlan($user->id, $data['plan_type']);
+            $packageData   = $packageResult->getData(true);
+
+            if (empty($packageData['success']) || $packageData['success'] === false) {
+                $paymentRequired = true;
+            } else {
+                $data['expire_at'] = Carbon::parse($packageData['expire_date']);
+            }
         }
 
+        if ($paymentRequired) {
+            $data['status']         = 'Pending';
+            $data['admin_approved'] = false;
+        } else {
+            if ($manualApprove) {
+                $data['status']         = 'Pending';
+                $data['admin_approved'] = false;
+            } else {
+                $data['status']         = 'Valid';
+                $data['admin_approved'] = true;
+                $data['published_at']   = now();
+                if ($data['plan_type'] == 'free') {
+                    $data['expire_at']      = now()->addDays(365);
+                }
+            }
+        }
 
         $listing = $service->create($sec, $data, $user->id);
+
         $user->role = 'advertiser';
         $user->save();
 
-        return new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model']));
+        if ($paymentRequired) {
+            return response()->json([
+                'success'          => false,
+                'message'          => $packageData['message'] ?? 'لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.',
+                'payment_required' => true,
+                'listing_id'       => $listing->id,
+            ], 402);
+        }
+
+        return new ListingResource(
+            $listing->load(['attributes', 'governorate', 'city', 'make', 'model'])
+        );
     }
 
     public function show(string $section, Listing $listing)
