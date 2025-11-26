@@ -71,7 +71,6 @@ class CitySeeder extends Seeder
             $gov = Governorate::where('name', $govName)->first();
 
             if (!$gov) {
-                // لو المحافظة مش موجودة في جدول المحافظات نطنشها
                 continue;
             }
 

@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 
+
 class PackagesController extends Controller
 {
     /**
@@ -93,6 +94,7 @@ class PackagesController extends Controller
                 $pkg,
                 'standard',
                 $v['standard_ads']  ?? null,
+
                 $v['standard_days'] ?? null,
                 (bool)($v['start_standard_now'] ?? false)
             );
@@ -124,39 +126,52 @@ class PackagesController extends Controller
         $startField  = "{$plan}_start_date";
         $expireField = "{$plan}_expire_date";
 
-        // 1) عدّل الرصيد
+        // 1) تعديل عدد الإعلانات
         if ($ads !== null) {
             $ads = max(0, $ads);
             $pkg->{$adsField} = $ads;
 
             if ($ads === 0) {
-                // Reset كامل للخطة
+                //Reset كامل للخطة
                 $pkg->{$usedField}   = 0;
                 $pkg->{$daysField}   = 0;
                 $pkg->{$startField}  = null;
                 $pkg->{$expireField} = null;
-                return; // انتهينا من الخطة دي
+                return;
             }
         }
 
-        // 2) عدّل الأيام (من غير ما تغيّر التواريخ لوحدها)
+        // 2) تعديل عدد الأيام فقط
         if ($days !== null) {
             $pkg->{$daysField} = max(0, $days);
         }
 
-        // 3) تشغيل/إعادة تشغيل
+        // 3) منطق التواريخ
         $hasStart   = !empty($pkg->{$startField});
         $daysVal    = (int)($pkg->{$daysField} ?? 0);
         $adsVal     = (int)($pkg->{$adsField} ?? 0);
 
-        // Autostart: لو مفيش start قبل كده وفيه رصيد
+        // Autostart: أول مرة يكون عنده رصيد إعلانات
         $shouldAutostart = !$hasStart && $adsVal > 0;
 
         if ($startNow || $shouldAutostart) {
+            // تشغيل الآن أو تشغيل تلقائي لأول مرة
             $pkg->{$startField}  = now();
-            $pkg->{$expireField} = $daysVal > 0 ? now()->copy()->addDays($daysVal) : null;
+            $pkg->{$expireField} = $daysVal > 0
+                ? now()->copy()->addDays($daysVal)
+                : null;
         }
+        // ⭐ NEW: لو الأيام اتعدلت والقطة شغالة بالفعل → اعادة حساب expire_date
+        elseif ($hasStart && $days !== null) {
+            $pkg->{$expireField} = $daysVal > 0
+                ? Carbon::parse($pkg->{$startField})->addDays($daysVal)
+                : null;
+        }
+
+        // ملاحظة: لو مفيش start ومفيش startNow ومفيش autostart  
+        // يبقى بنسيب الخطة زي ما هي، ده المقصود.
     }
+
 
 
 
