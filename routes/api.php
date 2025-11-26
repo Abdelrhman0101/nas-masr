@@ -27,6 +27,8 @@ Route::get('category-fields', [CategoryFieldsController::class, 'index']);
 Route::get('categories', [categoryController::class, 'index']);
 //public governorates routes
 Route::get('governorates', [GovernorateController::class, 'index']);
+Route::get('governorates/{governorate}/cities', [GovernorateController::class, 'cities']);
+
 //public makes routes
 Route::get('makes', [MakeController::class, 'index']);
 
@@ -110,10 +112,10 @@ Route::prefix('admin')
         Route::post('/user-packages', [PackagesController::class, 'storeOrUpdate']);
 
 
-        Route::post('governorates', [GovernorateController::class, 'store']);
-        Route::put('governorates/{governorate}', [GovernorateController::class, 'update']);
-        Route::delete('governorates/{governorate}', [GovernorateController::class, 'destroy']);
-        Route::get('governorates/{governorate}/cities', [GovernorateController::class, 'cities']);
+        Route::post('governorates', [GovernorateController::class, 'storeGov']);
+        Route::post('/city/{governorate}', [GovernorateController::class, 'storCities']);
+        Route::put('governorates/{governorate}', [GovernorateController::class, 'updateGov']);
+        Route::delete('governorates/{governorate}', [GovernorateController::class, 'destroyGov']);
         Route::post('governorates/{governorate}/cities', [GovernorateController::class, 'addCity']);
         Route::put('cities/{city}', [GovernorateController::class, 'updateCity']);
         Route::delete('cities/{city}', [GovernorateController::class, 'deleteCity']);

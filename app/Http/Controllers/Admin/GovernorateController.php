@@ -15,36 +15,34 @@ class GovernorateController extends Controller
         return response()->json($items);
     }
 
-    public function store(Request $request)
+    public function storeGov(Request $request)
     {
         $data = $request->validate([
-            'name' => ['required','string','max:191','unique:governorates,name'],
-            'cities' => ['nullable','array'],
-            'cities.*' => ['string','max:191'],
+            'name' => ['required', 'string', 'max:191', 'unique:governorates,name'],
         ]);
 
         $gov = Governorate::create(['name' => $data['name']]);
 
-        $bulk = [];
-        foreach (($data['cities'] ?? []) as $cityName) {
-            $bulk[] = [
-                'name' => $cityName,
-                'governorate_id' => $gov->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-        if ($bulk) {
-            City::insert($bulk);
-        }
-
         return response()->json($gov->load('cities'), 201);
     }
-
-    public function update(Request $request, Governorate $governorate)
+    public function storCit(Request $request, Governorate $governorate)
     {
         $data = $request->validate([
-            'name' => ['sometimes','string','max:191','unique:governorates,name,' . $governorate->id],
+            'name' => ['required', 'string', 'max:191', 'unique:cities,name,NULL,id,governorate_id,' . $governorate->id],
+        ]);
+
+        $city = City::create([
+            'name' => $data['name'],
+            'governorate_id' => $governorate->id,
+        ]);
+
+        return response()->json($city, 201);
+    }
+
+    public function updateGov(Request $request, Governorate $governorate)
+    {
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:191', 'unique:governorates,name,' . $governorate->id],
         ]);
 
         if (array_key_exists('name', $data)) {
@@ -54,11 +52,25 @@ class GovernorateController extends Controller
         return response()->json($governorate->load('cities'));
     }
 
-    public function destroy(Governorate $governorate)
+    public function destroyGov(Governorate $governorate)
     {
+        $adsCount = $governorate->listings()->count();
+
+        if ($adsCount > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن حذف المحافظة لأنها مستخدمة في الإعلانات.'
+            ], 400);
+        }
+
         $governorate->delete();
-        return response()->json(null, 204);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم حذف المحافظة بنجاح'
+        ]);
     }
+
 
     public function cities(Governorate $governorate)
     {
@@ -68,7 +80,7 @@ class GovernorateController extends Controller
     public function addCity(Request $request, Governorate $governorate)
     {
         $data = $request->validate([
-            'name' => ['required','string','max:191','unique:cities,name,NULL,id,governorate_id,' . $governorate->id],
+            'name' => ['required', 'string', 'max:191', 'unique:cities,name,NULL,id,governorate_id,' . $governorate->id],
         ]);
 
         $city = City::create([
@@ -82,8 +94,8 @@ class GovernorateController extends Controller
     public function updateCity(Request $request, City $city)
     {
         $data = $request->validate([
-            'name' => ['sometimes','string','max:191','unique:cities,name,' . $city->id . ',id,governorate_id,' . $city->governorate_id],
-            'governorate_id' => ['sometimes','integer','exists:governorates,id'],
+            'name' => ['sometimes', 'string', 'max:191', 'unique:cities,name,' . $city->id . ',id,governorate_id,' . $city->governorate_id],
+            'governorate_id' => ['sometimes', 'integer', 'exists:governorates,id'],
         ]);
 
         $city->update($data);

@@ -19,4 +19,8 @@ class Governorate extends Model
     {
         return $this->hasMany(Car::class);
     }
+    public function listings()
+    {
+        return $this->hasMany(Listing::class, 'governorate_id');
+    }
 }
