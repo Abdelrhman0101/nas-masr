@@ -44,6 +44,10 @@ class ListingController extends Controller
             $with[] = 'make';
             $with[] = 'model';
         }
+        if ($sec->supportsSections()) {
+            $with[] = 'mainSection';
+            $with[] = 'subSection';
+        }
 
         $q = Listing::query()
             ->forSection($sec)
@@ -58,6 +62,28 @@ class ListingController extends Controller
         if ($plan = $request->query('plan_type')) {
 
             $q->where('plan_type', $plan);
+        }
+        if ($sec->supportsSections()) {
+            $mainSectionId = $request->query('main_section_id');
+            $subSectionId = $request->query('sub_section_id');
+            $mainSectionName = $request->query('main_section');
+            $subSectionName = $request->query('sub_section');
+
+            if ($mainSectionId) {
+                $q->where('main_section_id', $mainSectionId);
+            } elseif ($mainSectionName) {
+                $q->whereHas('mainSection', function ($qq) use ($mainSectionName) {
+                    $qq->where('name', $mainSectionName);
+                });
+            }
+
+            if ($subSectionId) {
+                $q->where('sub_section_id', $subSectionId);
+            } elseif ($subSectionName) {
+                $q->whereHas('subSection', function ($qq) use ($subSectionName) {
+                    $qq->where('name', $subSectionName);
+                });
+            }
         }
 
         $attrEq = (array) $request->query('attr', []);
@@ -94,11 +120,13 @@ class ListingController extends Controller
         }
 
         $supportsMakeModel = $sec->supportsMakeModel();
+        $supportsSections = $sec->supportsSections();
+
         $categorySlug = $sec->slug;
         $categoryName = $sec->name;
 
 
-        $items = $rows->map(function ($item) use ($supportsMakeModel, $categorySlug, $categoryName) {
+        $items = $rows->map(function ($item) use ($supportsMakeModel, $supportsSections, $categorySlug, $categoryName) {
             // attributes (EAV) كاملة
             $attrs = [];
             if ($item->relationLoaded('attributes')) {
@@ -108,29 +136,40 @@ class ListingController extends Controller
             }
 
             $data = [
-                'attributes'      => $attrs,
-                'governorate'     => ($item->relationLoaded('governorate') && $item->governorate) ? $item->governorate->name : null,
-                'city'            => ($item->relationLoaded('city') && $item->city) ? $item->city->name : null,
-                'price'           => $item->price,
-                'contact_phone'   => $item->contact_phone,
-                'whatsapp_phone'  => $item->whatsapp_phone,
-                'main_image_url'  => $item->main_image ? asset('storage/' . $item->main_image) : null,
-                'created_at'      => $item->created_at,
-                'plan_type'       => $item->plan_type,
-                'views'           => $item->views,
-                'rank'            => $item->rank,
+                'attributes' => $attrs,
+                'governorate' => ($item->relationLoaded('governorate') && $item->governorate) ? $item->governorate->name : null,
+                'city' => ($item->relationLoaded('city') && $item->city) ? $item->city->name : null,
+                'price' => $item->price,
+                'contact_phone' => $item->contact_phone,
+                'whatsapp_phone' => $item->whatsapp_phone,
+                'main_image_url' => $item->main_image ? asset('storage/' . $item->main_image) : null,
+                'created_at' => $item->created_at,
+                'plan_type' => $item->plan_type,
+                'views' => $item->views,
+                'rank' => $item->rank,
                 'id' => $item->id,
                 'lat' => $item->lat,
                 'lng' => $item->lng,
 
                 // الكاتيجري
-                'category'        => $categorySlug,   // slug
-                'category_name'   => $categoryName,   // الاسم
+                'category' => $categorySlug,   // slug
+                'category_name' => $categoryName,   // الاسم
             ];
 
             if ($supportsMakeModel) {
-                $data['make']  = ($item->relationLoaded('make')  && $item->make)  ? $item->make->name  : null;
+                $data['make'] = ($item->relationLoaded('make') && $item->make) ? $item->make->name : null;
                 $data['model'] = ($item->relationLoaded('model') && $item->model) ? $item->model->name : null;
+            }
+            if ($supportsSections) {
+                $data['main_section_id'] = $item->main_section_id;
+                $data['main_section'] = ($item->relationLoaded('mainSection') && $item->mainSection)
+                    ? $item->mainSection->name
+                    : null;
+
+                $data['sub_section_id'] = $item->sub_section_id;
+                $data['sub_section'] = ($item->relationLoaded('subSection') && $item->subSection)
+                    ? $item->subSection->name
+                    : null;
             }
 
             return $data;
@@ -153,8 +192,10 @@ class ListingController extends Controller
 
     protected function decodeJsonSafe($json)
     {
-        if (is_null($json)) return null;
-        if (is_array($json)) return $json;
+        if (is_null($json))
+            return null;
+        if (is_array($json))
+            return $json;
 
         $x = json_decode($json, true);
         return json_last_error() === JSON_ERROR_NONE ? $x : $json;
@@ -165,7 +206,7 @@ class ListingController extends Controller
     public function store(string $section, GenericListingRequest $request, ListingService $service)
     {
         $user = $request->user();
-        $sec  = Section::fromSlug($section);
+        $sec = Section::fromSlug($section);
         $data = $request->validated();
 
         $rank = $this->getNextRank(Listing::class, $sec->id());
@@ -189,7 +230,7 @@ class ListingController extends Controller
         });
 
         $paymentRequired = false;
-        $packageData     = null;
+        $packageData = null;
 
         // if ($data['plan_type'] !== 'free') {
         //     $packageResult = $this->consumeForPlan($user->id, $data['plan_type']);
@@ -203,18 +244,18 @@ class ListingController extends Controller
         // }
 
         if ($paymentRequired) {
-            $data['status']         = 'Pending';
+            $data['status'] = 'Pending';
             $data['admin_approved'] = false;
         } else {
             if ($manualApprove) {
-                $data['status']         = 'Pending';
+                $data['status'] = 'Pending';
                 $data['admin_approved'] = false;
             } else {
-                $data['status']         = 'Valid';
+                $data['status'] = 'Valid';
                 $data['admin_approved'] = true;
-                $data['published_at']   = now();
+                $data['published_at'] = now();
                 // if ($data['plan_type'] == 'free') {
-                    $data['expire_at']      = now()->addDays(365);
+                $data['expire_at'] = now()->addDays(365);
                 // }
             }
         }
@@ -226,15 +267,23 @@ class ListingController extends Controller
 
         if ($paymentRequired) {
             return response()->json([
-                'success'          => false,
-                'message'          => $packageData['message'] ?? 'لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.',
+                'success' => false,
+                'message' => $packageData['message'] ?? 'لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.',
                 'payment_required' => true,
-                'listing_id'       => $listing->id,
+                'listing_id' => $listing->id,
             ], 402);
         }
 
         return new ListingResource(
-            $listing->load(['attributes', 'governorate', 'city', 'make', 'model'])
+            $listing->load([
+                'attributes',
+                'governorate',
+                'city',
+                'make',
+                'model',
+                'mainSection',
+                'subSection',
+            ])
         );
     }
 
@@ -248,26 +297,35 @@ class ListingController extends Controller
         $banner = null;
         if ($sec->slug == "real_estate") {
             $banner = "storage/uploads/banner/796c4c36d93281ccfb0cac71ed31e5d1b182ae79.png";
-        };
+        }
+        ;
 
-        $owner =    User::select('id', 'name', 'created_at')->find($listing->user_id);
+        $owner = User::select('id', 'name', 'created_at')->find($listing->user_id);
         $adsCount = Listing::where('user_id', $listing->user_id)->count();
 
         $userPayload = [
-            'id'               => $owner?->id,
-            'name'             => $owner?->name ?? "advertiser",
-            'joined_at'        => $owner?->created_at?->toIso8601String(),
-            'joined_at_human'  => $owner?->created_at?->diffForHumans(),
-            'listings_count'   => $adsCount,
+            'id' => $owner?->id,
+            'name' => $owner?->name ?? "advertiser",
+            'joined_at' => $owner?->created_at?->toIso8601String(),
+            'joined_at_human' => $owner?->created_at?->diffForHumans(),
+            'listings_count' => $adsCount,
             'banner' => $banner
         ];
 
 
         return (new ListingResource(
-            $listing->load(['attributes', 'governorate', 'city', 'make', 'model'])
+            $listing->load([
+                'attributes',
+                'governorate',
+                'city',
+                'make',
+                'model',
+                'mainSection',
+                'subSection',
+            ])
         ))->additional([
-            'user' => $userPayload,
-        ]);
+                    'user' => $userPayload,
+                ]);
     }
 
     protected function userIsAdmin($user): bool
@@ -305,7 +363,15 @@ class ListingController extends Controller
 
         $listing = $service->update($sec, $listing, $data);
 
-        return new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model']));
+        return new ListingResource($listing->load([
+            'attributes',
+            'governorate',
+            'city',
+            'make',
+            'model',
+            'mainSection',
+            'subSection',
+        ]));
     }
 
     public function destroy(string $section, Listing $listing)

@@ -37,7 +37,9 @@ class Listing extends Model
         'views',
         'admin_approved',
         'expire_at',
-        'isPayment'
+        'isPayment',
+        'main_section_id',
+        'sub_section_id',
 
     ];
 
@@ -80,6 +82,19 @@ class Listing extends Model
     {
         return $this->belongsTo(CarModel::class);
     }
+    // app/Models/Listing.php
+
+    public function mainSection()
+    {
+        return $this->belongsTo(CategoryMainSection::class, 'main_section_id');
+    }
+
+    public function subSection()
+    {
+        return $this->belongsTo(CategorySubSection::class, 'sub_section_id');
+    }
+
+
 
     public static function autoExpire(): int
     {
@@ -88,7 +103,7 @@ class Listing extends Model
             ->whereNotNull('expire_at')
             ->where('expire_at', '<=', now())
             ->update([
-                'status'    => 'Expired',
+                'status' => 'Expired',
                 'isPayment' => false,
             ]);
     }
@@ -99,7 +114,7 @@ class Listing extends Model
         return $query
             ->where('status', 'Valid')
             ->where(function ($q) {
-                $q->whereNull('expire_at')          
+                $q->whereNull('expire_at')
                     ->orWhere('expire_at', '>', now());
             });
     }

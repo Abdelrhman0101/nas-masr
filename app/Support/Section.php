@@ -69,7 +69,41 @@ final class Section
 
     public function supportsMakeModel(): bool
     {
-        return in_array($this->slug, ['cars', 'cars_rent','spare-parts'], true);
+        return in_array($this->slug, ['cars', 'cars_rent', 'spare-parts'], true);
+    }
+    public function supportsSections(): bool
+    {
+        return in_array($this->slug, [
+            'stores',
+            'restaurants',
+            'groceries',
+            'food-products',
+            'electronics',
+            'home-appliances',
+            'home-tools',
+            'furniture',
+            'health',
+            'education',
+            'shipping',
+            'mens-clothes',
+            'watches-jewelry',
+            'free-professions',
+            'kids-toys',
+            'gym',
+            'construction',
+            'maintenance',
+            'car-services',
+            'home-services',
+            'lighting-decor',
+            'animals',
+            'farm-products',
+            'wholesale',
+            'production-lines',
+            'light-vehicles',
+            'heavy-transport',
+            'tools',
+            'missing',
+        ], true);
     }
 
     public function supportsContact(): bool

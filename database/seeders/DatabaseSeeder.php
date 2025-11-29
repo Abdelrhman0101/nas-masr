@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             CategoriesTableSeeder::class,
             SystemSettingsSeeder::class,
             AdminSeeder::class,
+            CategorySectionsSeeder::class,
         ]);
     }
 }

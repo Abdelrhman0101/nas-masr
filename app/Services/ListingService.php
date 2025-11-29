@@ -21,6 +21,12 @@ class ListingService
             } else {
                 unset($data['make_id'], $data['model_id'], $data['make'], $data['model']);
             }
+            if ($section->supportsSections()) {
+                $this->normalizeSections($data, $section);
+            } else {
+                unset($data['main_section_id'], $data['sub_section_id'], $data['main_section'], $data['sub_section']);
+            }
+
 
             $common = Arr::only($data, [
                 'price',
@@ -44,6 +50,9 @@ class ListingService
                 'model_id',
                 'expire_at',
                 'isPayment',
+                'main_section_id',
+                'sub_section_id',
+
             ]);
 
             $listing = Listing::create($common + [
@@ -67,6 +76,13 @@ class ListingService
             } else {
                 unset($data['make_id'], $data['model_id'], $data['make'], $data['model']);
             }
+            if ($section->supportsSections()) {
+                $this->normalizeSections($data, $section);
+            } else {
+                unset($data['main_section_id'], $data['sub_section_id'], $data['main_section'], $data['sub_section']);
+            }
+
+
 
             $listing->update(Arr::only($data, [
                 'price',
@@ -90,6 +106,9 @@ class ListingService
                 'model_id',
                 'expire_at',
                 'isPayment',
+                'main_section_id',
+                'sub_section_id',
+
             ]));
 
             if (array_key_exists('attributes', $data)) {
@@ -102,10 +121,10 @@ class ListingService
 
     protected function normalizeLocationIdsOrFail(array &$data): void
     {
-        $governorateId   = $data['governorate_id'] ?? null;
+        $governorateId = $data['governorate_id'] ?? null;
         $governorateName = isset($data['governorate']) ? trim((string) $data['governorate']) : null;
-        $cityId          = $data['city_id'] ?? null;
-        $cityName        = isset($data['city']) ? trim((string) $data['city']) : null;
+        $cityId = $data['city_id'] ?? null;
+        $cityName = isset($data['city']) ? trim((string) $data['city']) : null;
 
 
         if (!$governorateId && $governorateName) {
@@ -196,10 +215,10 @@ class ListingService
 
     protected function normalizeMakeModel(array &$data): void
     {
-        $makeId     = $data['make_id'] ?? null;
-        $makeName   = isset($data['make']) ? trim((string) $data['make']) : null;
-        $modelId    = $data['model_id'] ?? null;
-        $modelName  = isset($data['model']) ? trim((string) $data['model']) : null;
+        $makeId = $data['make_id'] ?? null;
+        $makeName = isset($data['make']) ? trim((string) $data['make']) : null;
+        $modelId = $data['model_id'] ?? null;
+        $modelName = isset($data['model']) ? trim((string) $data['model']) : null;
 
         if (!$makeId && $makeName) {
             $makeId = DB::table('makes')
@@ -275,6 +294,97 @@ class ListingService
             $data['model_id'] = $existingModelId;
         }
     }
+    protected function normalizeSections(array &$data, Section $section): void
+    {
+        $categoryId = $section->id();
+
+        $mainId = $data['main_section_id'] ?? null;
+        $mainName = isset($data['main_section']) ? trim((string) $data['main_section']) : null;
+        $subId = $data['sub_section_id'] ?? null;
+        $subName = isset($data['sub_section']) ? trim((string) $data['sub_section']) : null;
+
+
+        if (!$mainId && $mainName) {
+            $mainId = DB::table('category_main_sections')
+                ->where('category_id', $categoryId)
+                ->where('name', $mainName)
+                ->value('id');
+
+            if (!$mainId) {
+                throw ValidationException::withMessages([
+                    'main_section' => ['القسم الرئيسي غير معروف. فضلاً اختر من القائمة.'],
+                ]);
+            }
+
+            $data['main_section_id'] = $mainId;
+        }
+
+        if ($mainId) {
+            $exists = DB::table('category_main_sections')
+                ->where('id', $mainId)
+                ->where('category_id', $categoryId)
+                ->exists();
+
+            if (!$exists) {
+                throw ValidationException::withMessages([
+                    'main_section_id' => ['القسم الرئيسي غير موجود لهذا القسم. فضلاً اختر من القائمة.'],
+                ]);
+            }
+        }
+
+        // لو لا main ولا sub اتبعتوا، سيبي السيرفس في حاله، الريكويست نفسه ممكن يكون عامله required
+        if (!$mainId && !$mainName && !$subId && !$subName) {
+            return;
+        }
+
+        // 2) حل sub_section بنفس منطق make/model
+
+        if ($subId) {
+            if (!$mainId) {
+                throw ValidationException::withMessages([
+                    'main_section_id' => ['يجب اختيار القسم الرئيسي قبل اختيار القسم الفرعي.'],
+                ]);
+            }
+
+            $sub = DB::table('category_sub_section')
+                ->where('id', $subId)
+                ->where('main_section_id', $mainId)
+                ->where('category_id', $categoryId)
+                ->first();
+
+            if (!$sub) {
+                throw ValidationException::withMessages([
+                    'sub_section_id' => ['هذا القسم الفرعي لا يتبع القسم الرئيسي المختار أو غير معروف.'],
+                ]);
+            }
+
+            return;
+        }
+
+        // مفيش sub_section_id لكن في اسم
+        if ($subName) {
+            if (!$mainId) {
+                throw ValidationException::withMessages([
+                    'main_section_id' => ['لا يمكن اختيار قسم فرعي بدون تحديد القسم الرئيسي أولاً.'],
+                ]);
+            }
+
+            $existingSubId = DB::table('category_sub_section')
+                ->where('category_id', $categoryId)
+                ->where('main_section_id', $mainId)
+                ->where('name', $subName)
+                ->value('id');
+
+            if (!$existingSubId) {
+                throw ValidationException::withMessages([
+                    'sub_section' => ['القسم الفرعي غير معروف لهذا القسم الرئيسي. فضلاً اختر من القائمة.'],
+                ]);
+            }
+
+            $data['sub_section_id'] = $existingSubId;
+        }
+    }
+
 
 
 

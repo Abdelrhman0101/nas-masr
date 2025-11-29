@@ -42,9 +42,19 @@ class ListingResource extends JsonResource
         $categoryName = $sec?->name;
 
         $supportsMakeModel = $sec?->supportsMakeModel() ?? false;
+        $supportsSections = $sec?->supportsSections() ?? false;
 
         $makeName = ($supportsMakeModel && $this->relationLoaded('make') && $this->make) ? $this->make->name : null;
         $modelName = ($supportsMakeModel && $this->relationLoaded('model') && $this->model) ? $this->model->name : null;
+
+        $mainSectionName = ($supportsSections && $this->relationLoaded('mainSection') && $this->mainSection)
+            ? $this->mainSection->name
+            : null;
+
+        $subSectionName = ($supportsSections && $this->relationLoaded('subSection') && $this->subSection)
+            ? $this->subSection->name
+            : null;
+
 
         return [
             'id' => $this->id,
@@ -76,6 +86,11 @@ class ListingResource extends JsonResource
             'model_id' => $this->when($supportsMakeModel, $this->model_id),
             'model' => $this->when($supportsMakeModel, $modelName),
 
+            'main_section_id' => $this->when($supportsSections, $this->main_section_id),
+            'main_section' => $this->when($supportsSections, $mainSectionName),
+            'sub_section_id' => $this->when($supportsSections, $this->sub_section_id),
+            'sub_section' => $this->when($supportsSections, $subSectionName),
+
             'main_image' => $this->main_image,
             'main_image_url' => $mainUrl,
             'images' => $imgs,
@@ -88,7 +103,7 @@ class ListingResource extends JsonResource
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'expire_at' => $this->expire_at??"قيد الانتظار",
+            'expire_at' => $this->expire_at ?? "قيد الانتظار",
             'isPayment' => $this->isPayment,
         ];
     }

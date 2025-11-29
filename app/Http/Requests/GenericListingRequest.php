@@ -23,16 +23,23 @@ class GenericListingRequest extends FormRequest
         // قواعد إضافية عامة
         $extra = [
             // خليه يتماشى مع حالتك الفعلية بدل draft/published/archived
-            'status'       => ['nullable', Rule::in(['Valid', 'Pending', 'Rejected', 'Expired'])],
+            'status' => ['nullable', Rule::in(['Valid', 'Pending', 'Rejected', 'Expired'])],
             'published_at' => ['nullable', 'date'],
         ];
 
         if ($section->supportsMakeModel()) {
             $extra['make_id'] = ['nullable', 'integer', 'exists:makes,id'];
             $extra['model_id'] = ['nullable', 'integer', 'exists:models,id'];
-            $extra['make']    = ['nullable', 'string'];
-            $extra['model']   = ['nullable', 'string'];
+            $extra['make'] = ['nullable', 'string'];
+            $extra['model'] = ['nullable', 'string'];
         }
+        if ($section->supportsSections()) {
+            $extra['main_section_id'] = ['nullable', 'integer', 'exists:category_main_sections,id'];
+            $extra['sub_section_id'] = ['nullable', 'integer', 'exists:category_sub_sections,id'];
+            $extra['main_section'] = ['nullable', 'string'];
+            $extra['sub_section'] = ['nullable', 'string'];
+        }
+
 
         $rules = $rules + $extra;
 
@@ -69,6 +76,13 @@ class GenericListingRequest extends FormRequest
         if (isset($data['city']) && is_string($data['city'])) {
             $data['city'] = trim($data['city']);
         }
+        if (isset($data['main_section']) && is_string($data['main_section'])) {
+            $data['main_section'] = trim($data['main_section']);
+        }
+        if (isset($data['sub_section']) && is_string($data['sub_section'])) {
+            $data['sub_section'] = trim($data['sub_section']);
+        }
+
 
         if (isset($data['attributes']) && is_array($data['attributes'])) {
             foreach (['negotiable'] as $boolKey) {
@@ -97,30 +111,35 @@ class GenericListingRequest extends FormRequest
     public function attributes(): array
     {
         $attrs = [
-            'title'            => 'العنوان',
-            'price'            => 'السعر',
-            'description'      => 'الوصف',
-            'governorate_id'   => 'المحافظة',
-            'city_id'          => 'المدينة',
-            'governorate'      => 'المحافظة',
-            'city'             => 'المدينة',
-            'lat'              => 'خط العرض',
-            'lng'              => 'خط الطول',
-            'address'          => 'العنوان',
-            'main_image'       => 'الصورة الرئيسية',
-            'images'           => 'معرض الصور',
-            'images.*'         => 'الصورة',
-            'status'           => 'الحالة',
-            'published_at'     => 'تاريخ النشر',
-            'plan_type'        => 'نوع الخطة',
-            'contact_phone'    => 'رقم الاتصال',
-            'whatsapp_phone'   => 'رقم الواتساب',
-            'make_id'          => 'الماركة',
-            'model_id'         => 'الموديل',
-            'make'             => 'الماركة',
-            'model'            => 'الموديل',
-            'expire_at'        => 'تاريخ الانتهاء',
-            'isPayment'        => 'هل مدفوع',
+            'title' => 'العنوان',
+            'price' => 'السعر',
+            'description' => 'الوصف',
+            'governorate_id' => 'المحافظة',
+            'city_id' => 'المدينة',
+            'governorate' => 'المحافظة',
+            'city' => 'المدينة',
+            'lat' => 'خط العرض',
+            'lng' => 'خط الطول',
+            'address' => 'العنوان',
+            'main_image' => 'الصورة الرئيسية',
+            'images' => 'معرض الصور',
+            'images.*' => 'الصورة',
+            'status' => 'الحالة',
+            'published_at' => 'تاريخ النشر',
+            'plan_type' => 'نوع الخطة',
+            'contact_phone' => 'رقم الاتصال',
+            'whatsapp_phone' => 'رقم الواتساب',
+            'make_id' => 'الماركة',
+            'model_id' => 'الموديل',
+            'make' => 'الماركة',
+            'model' => 'الموديل',
+            'expire_at' => 'تاريخ الانتهاء',
+            'isPayment' => 'هل مدفوع',
+            'main_section_id' => 'القسم الرئيسي',
+            'sub_section_id' => 'القسم الفرعي',
+            'main_section' => 'القسم الرئيسي',
+            'sub_section' => 'القسم الفرعي',
+
         ];
 
         try {
@@ -138,14 +157,14 @@ class GenericListingRequest extends FormRequest
     {
         $msgs = [
             'required' => 'حقل :attribute مطلوب.',
-            'integer'  => 'حقل :attribute يجب أن يكون عددًا صحيحًا.',
-            'numeric'  => 'حقل :attribute يجب أن يكون رقمًا.',
-            'boolean'  => 'حقل :attribute يجب أن يكون نعم/لا.',
-            'date'     => 'حقل :attribute يجب أن يكون تاريخًا صحيحًا.',
-            'in'       => 'قيمة :attribute غير ضمن القيم المسموح بها.',
-            'max'      => 'طول :attribute أكبر من المسموح.',
-            'exists'   => ':attribute غير موجود.',
-            'array'    => 'حقل :attribute يجب أن يكون قائمة.',
+            'integer' => 'حقل :attribute يجب أن يكون عددًا صحيحًا.',
+            'numeric' => 'حقل :attribute يجب أن يكون رقمًا.',
+            'boolean' => 'حقل :attribute يجب أن يكون نعم/لا.',
+            'date' => 'حقل :attribute يجب أن يكون تاريخًا صحيحًا.',
+            'in' => 'قيمة :attribute غير ضمن القيم المسموح بها.',
+            'max' => 'طول :attribute أكبر من المسموح.',
+            'exists' => ':attribute غير موجود.',
+            'array' => 'حقل :attribute يجب أن يكون قائمة.',
             'distinct' => 'حقل :attribute يحتوي عناصر مكرّرة.',
         ];
 
@@ -175,7 +194,7 @@ class GenericListingRequest extends FormRequest
 
     protected function resolveSection(): Section
     {
-        $param = $this->route('section'); 
+        $param = $this->route('section');
         if ($param instanceof Section) {
             return $param;
         }
@@ -192,10 +211,13 @@ class GenericListingRequest extends FormRequest
         }
 
         $ruleSet = array_values(array_filter($ruleSet, function ($r) {
-            $r = (string)$r;
-            if ($r === 'required') return false;
-            if (str_starts_with($r, 'required_if')) return false;
-            if (str_starts_with($r, 'required_unless')) return false;
+            $r = (string) $r;
+            if ($r === 'required')
+                return false;
+            if (str_starts_with($r, 'required_if'))
+                return false;
+            if (str_starts_with($r, 'required_unless'))
+                return false;
             return true;
         }));
 
@@ -204,7 +226,7 @@ class GenericListingRequest extends FormRequest
         return $ruleSet;
     }
 
-    
+
     protected function ensureSometimesNullable($ruleSet): array
     {
         if (is_string($ruleSet)) {

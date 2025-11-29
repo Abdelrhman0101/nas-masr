@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use App\Http\Requests\Admin\StoreCategoryFieldRequest;
 use App\Http\Requests\Admin\UpdateCategoryFieldRequest;
@@ -13,6 +12,9 @@ use App\Models\Governorate;
 use App\Models\Make;
 use App\Support\Section;
 use Illuminate\Http\Request;
+use App\Models\CategoryMainSection;
+use App\Models\CategorySubSection;
+
 
 class CategoryFieldsController extends Controller
 {
@@ -23,7 +25,9 @@ class CategoryFieldsController extends Controller
             ->orderBy('category_slug')
             ->orderBy('sort_order');
 
-        if ($slug = $request->query('category_slug')) {
+        $slug = $request->query('category_slug');
+
+        if ($slug) {
             $q->where('category_slug', $slug);
         }
 
@@ -34,10 +38,25 @@ class CategoryFieldsController extends Controller
         $section = $slug ? Section::fromSlug($slug) : null;
 
         $supportsMakeModel = $section?->supportsMakeModel() ?? false;
+        $supportsSections = $section?->supportsSections() ?? false; // ✅ جديد
 
         $makes = [];
         if ($supportsMakeModel) {
             $makes = Make::with('models')->get();
+        }
+
+        $mainSections = [];
+        if ($supportsSections && $section) {
+            $mainSections = CategoryMainSection::with([
+                'subSections' => function ($q) {
+                    $q->where('is_active', true)
+                        ->orderBy('sort_order');
+                }
+            ])
+                ->where('category_id', $section->id())   // 🟢 بس الكاتيجوري الحالي
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get();
         }
 
         return response()->json([
@@ -46,8 +65,11 @@ class CategoryFieldsController extends Controller
             'governorates' => $governorates,
 
             'makes' => $supportsMakeModel ? $makes : [],
-
             'supports_make_model' => $supportsMakeModel,
+
+            // ✅ دعم الأقسام الرئيسية/الفرعية
+            'supports_sections' => $supportsSections,
+            'main_sections' => $mainSections, // جوّاها subSections جاهزة
         ]);
     }
 
@@ -64,6 +86,7 @@ class CategoryFieldsController extends Controller
                 'is_active' => true,
             ]
         );
+
         if (empty($data['options'])) {
             $data['options'] = [];
         }
@@ -85,7 +108,7 @@ class CategoryFieldsController extends Controller
             ->where('field_name', $data['field_name'])
             ->first();
 
-        if (! $field) {
+        if (!$field) {
             throw ValidationException::withMessages([
                 'field_name' => ['الحقل المطلوب غير موجود في هذا القسم.'],
             ]);
@@ -110,7 +133,7 @@ class CategoryFieldsController extends Controller
 
         return response()->json([
             'message' => 'تم تحديث الحقل بنجاح',
-            'data'    => $field->fresh(),
+            'data' => $field->fresh(),
         ]);
     }
 
