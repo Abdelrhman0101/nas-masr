@@ -549,10 +549,10 @@ class UserController extends Controller
     //create admin otp
     public function createOtp(User $user)
     {
-        $otp = rand(100000, 999999);
-        $user->otp = $otp;
+        // $otp = rand(100000, 999999);
+        $user->otp =1234 ;
         $user->save();
-        return response()->json(['message' => 'Otp created successfully', 'otp' => $otp]);
+        return response()->json(['message' => 'Otp created successfully', 'otp' =>  $user->otp]);
     }
 
     //user verify otp
