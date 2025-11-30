@@ -199,17 +199,76 @@ class CategoryFieldsSeeder extends Seeder
             ],
         ];
 
+        // 🔹 حقول المدرسين
+        $teachersFields = [
+            [
+                'category_slug' => 'teachers', // غيّريه لو السلاج مختلف عندك
+                'field_name' => 'specialization',
+                'display_name' => 'التخصص',
+                'type' => 'string',
+                'options' => [
+                    'رياضيات',
+                    'فيزياء',
+                    'كيمياء',
+                    'أحياء',
+                    'لغة عربية',
+                    'لغة إنجليزية',
+                    'لغة فرنسية',
+                    'دراسات اجتماعية',
+                    'حاسب آلي',
+                    'علوم شرعية',
+                    'رياض أطفال',
+                    'مرحلة ابتدائية',
+                    'مرحلة إعدادية',
+                    'مرحلة ثانوية',
+                ],
+                'required' => true,
+                'filterable' => true,
+                'sort_order' => 1,
+            ],
+        ];
+
+        // 🔹 حقول الأطباء
+        $doctorsFields = [
+            [
+                'category_slug' => 'doctors', // غيّريه لو السلاج مختلف عندك
+                'field_name' => 'specialization',
+                'display_name' => 'التخصص',
+                'type' => 'string',
+                'options' => [
+                    'باطنة',
+                    'أطفال',
+                    'قلب وأوعية دموية',
+                    'عظام',
+                    'نساء وتوليد',
+                    'أنف وأذن وحنجرة',
+                    'جلدية',
+                    'أسنان',
+                    'عيون',
+                    'مخ وأعصاب',
+                    'مسالك بولية',
+                    'جراحة عامة',
+                ],
+                'required' => true,
+                'filterable' => true,
+                'sort_order' => 1,
+            ],
+        ];
+
+
         // ✅ كل الحقول المسموح بيها
         $allFields = array_merge(
             $realEstateFields,
             $carFields,
             $carsRentFields,
             $jobsFields,
+            $teachersFields,
+            $doctorsFields,
         );
 
         // ✅ نبني قائمة بالمفاتيح المسموح بيها: category_slug + field_name
         $allowedKeys = collect($allFields)
-            ->map(fn ($f) => $f['category_slug'] . '::' . $f['field_name'])
+            ->map(fn($f) => $f['category_slug'] . '::' . $f['field_name'])
             ->all();
 
         // ✅ امسح أي حقول قديمة مش موجودة في اللي فوق
@@ -226,17 +285,17 @@ class CategoryFieldsSeeder extends Seeder
             CategoryField::updateOrCreate(
                 [
                     'category_slug' => $field['category_slug'],
-                    'field_name'    => $field['field_name'],
+                    'field_name' => $field['field_name'],
                 ],
                 [
                     'display_name' => $field['display_name'],
-                    'type'         => $field['type'] ?? 'string',
-                    'options'      => $field['options'] ?? [],
-                    'required'     => $field['required'] ?? true,
-                    'filterable'   => $field['filterable'] ?? true,
-                    'is_active'    => true,
-                    'sort_order'   => $field['sort_order'] ?? 999,
-                    'rules_json'   => $field['rules_json'] ?? null,
+                    'type' => $field['type'] ?? 'string',
+                    'options' => $field['options'] ?? [],
+                    'required' => $field['required'] ?? true,
+                    'filterable' => $field['filterable'] ?? true,
+                    'is_active' => true,
+                    'sort_order' => $field['sort_order'] ?? 999,
+                    'rules_json' => $field['rules_json'] ?? null,
                 ]
             );
         }
