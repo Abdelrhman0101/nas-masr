@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Make;
 use App\Models\CarModel;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
 
 class MakeController extends Controller
 {
@@ -15,62 +17,61 @@ class MakeController extends Controller
         return response()->json($items);
     }
 
-    public function store(Request $request)
+    public function addMake(Request $request)
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:191'], // شيلنا unique هنا
-            'models'   => ['nullable', 'array'],
-            'models.*' => ['string', 'max:191'],
+            // 'models'   => ['nullable', 'array'],
+            // 'models.*' => ['string', 'max:191'],
         ]);
 
-        // 1) نحاول نلاقي make موجودة بنفس الاسم
         $make = Make::where('name', $data['name'])->first();
 
         $isNew = false;
 
-        if (! $make) {
-            // مافيش make بالاسم ده → نعمل create جديد
+        if (!$make) {
             $make = Make::create(['name' => $data['name']]);
             $isNew = true;
         } else {
-            // لو حابة تسمحي بتعديل الاسم نفسه (نادراً)، تقدري تعملي:
-            // $make->update(['name' => $data['name']]);
+            return response()->json([
+                'message' => 'Make with this name already exists.',
+            ], 422);
         }
 
-        // 2) نجهز الموديلات اللي جاية من الريكوست
-        $models = collect($data['models'] ?? [])
-            ->map(fn($m) => trim($m))
-            ->filter()          // شيل الفاضي
-            ->unique()          // شيل التكرار
-            ->values();         // ريسيت للـ index
+        // // 2) نجهز الموديلات اللي جاية من الريكوست
+        // $models = collect($data['models'] ?? [])
+        //     ->map(fn($m) => trim($m))
+        //     ->filter()          // شيل الفاضي
+        //     ->unique()          // شيل التكرار
+        //     ->values();         // ريسيت للـ index
 
-        $existing = $make->models()
-            ->pluck('id', 'name');
+        // $existing = $make->models()
+        //     ->pluck('id', 'name');
 
-        $keepIds = [];
+        // $keepIds = [];
 
-        foreach ($models as $modelName) {
-            if (isset($existing[$modelName])) {
-                // الموديل موجود بالفعل بنفس الاسم → نخليه
-                $keepIds[] = $existing[$modelName];
-            } else {
-                // موديل جديد → نضيفه
-                $model = $make->models()->create([
-                    'name' => $modelName,
-                ]);
-                $keepIds[] = $model->id;
-            }
-        }
+        // foreach ($models as $modelName) {
+        //     if (isset($existing[$modelName])) {
+        //         // الموديل موجود بالفعل بنفس الاسم → نخليه
+        //         $keepIds[] = $existing[$modelName];
+        //     } else {
+        //         // موديل جديد → نضيفه
+        //         $model = $make->models()->create([
+        //             'name' => $modelName,
+        //         ]);
+        //         $keepIds[] = $model->id;
+        //     }
+        // }
 
 
-        if (count($keepIds) > 0) {
-            $make->models()
-                ->whereNotIn('id', $keepIds)
-                ->delete();
-        } else {
-            // لو مبعتيش ولا موديل → امسح كل الموديلات القديمة
-            $make->models()->delete();
-        }
+        // if (count($keepIds) > 0) {
+        //     $make->models()
+        //         ->whereNotIn('id', $keepIds)
+        //         ->delete();
+        // } else {
+        //     // لو مبعتيش ولا موديل → امسح كل الموديلات القديمة
+        //     $make->models()->delete();
+        // }
 
 
         $make->load('models');
@@ -104,16 +105,35 @@ class MakeController extends Controller
 
     public function addModel(Request $request, Make $make)
     {
+        // ✅ Validate
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:191', 'unique:models,name,NULL,id,make_id,' . $make->id],
+            'models' => ['required', 'array', 'min:1'],
+            'models.*' => [
+                'required',
+                'string',
+                'max:191',
+                // Unique per make
+                Rule::unique('models', 'name')->where(function ($q) use ($make) {
+                    return $q->where('make_id', $make->id);
+                }),
+            ],
         ]);
 
-        $model = CarModel::create([
-            'name' => $data['name'],
+        $createdModels = [];
+
+        // ✅ Create all models
+        foreach ($data['models'] as $name) {
+            $createdModels[] = CarModel::create([
+                'name' => $name,
+                'make_id' => $make->id,
+            ]);
+        }
+
+        // ✅ Response بالشكل اللي تحبيه
+        return response()->json([
             'make_id' => $make->id,
-        ]);
-
-        return response()->json($model, 201);
+            'models' => $createdModels,
+        ], 201);
     }
 
     public function updateModel(Request $request, CarModel $model)

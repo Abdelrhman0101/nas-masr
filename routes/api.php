@@ -121,7 +121,7 @@ Route::prefix('admin')
         Route::delete('cities/{city}', [GovernorateController::class, 'deleteCity']);
 
 
-        Route::post('makes', [MakeController::class, 'store']);
+        Route::post('makes', [MakeController::class, 'addMake']);
         Route::put('makes/{make}', [MakeController::class, 'update']);
         Route::delete('makes/{make}', [MakeController::class, 'destroy']);
         Route::get('makes/{make}/models', [MakeController::class, 'models']);
