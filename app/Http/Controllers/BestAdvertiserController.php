@@ -117,6 +117,7 @@ class BestAdvertiserController extends Controller
                 'id' => $ba->id,
                 'user' => [
                     'name' => $u->name,
+                    'id' => $u->id,
                 ],
                 'listings' => $byUser[$ba->user_id] ?? [],
             ];
