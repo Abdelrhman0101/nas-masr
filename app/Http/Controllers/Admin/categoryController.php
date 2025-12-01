@@ -12,12 +12,20 @@ class categoryController extends Controller
 {
     public function index(Request $request)
     {
-        $q = Category::query()
-            ->where('is_active', true) 
-            ->orderBy('sort_order', 'asc');
 
-        if ($request->filled('active')) {
-            $q->where('is_active', (bool) $request->boolean('active'));
+        $user = Request()->user();
+        if ($user?->role == 'admin') {
+            $q = Category::query()
+                // ->where('is_active', true) 
+                ->orderBy('sort_order', 'asc');
+        } else {
+            $q = Category::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order', 'asc');
+
+            if ($request->filled('active')) {
+                $q->where('is_active', (bool) $request->boolean('active'));
+            }
         }
 
         return CategoryResource::collection($q->get());
@@ -37,6 +45,7 @@ class categoryController extends Controller
     // PUT /api/admin/categories/{category}
     public function update(CategoryRequest $request, Category $category)
     {
+
         $category->update($request->validated());
 
         return response()->json([

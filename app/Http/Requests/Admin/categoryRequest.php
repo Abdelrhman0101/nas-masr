@@ -4,14 +4,15 @@ namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class categoryRequest extends FormRequest
+class CategoryRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return false;
+        // لو عندك صلاحيات أدق، عدّلي الكلام ده
+        return true;
     }
 
     /**
@@ -21,24 +22,39 @@ class categoryRequest extends FormRequest
      */
     public function rules(): array
     {
-         $id = $this->route('category');
+        // لو عندك Route Model Binding هيبقى object، لو ID عادي هيبقى رقم
+        $category = $this->route('category');
+        $id = is_object($category) ? $category->id : $category;
+
+        $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
 
         return [
-            'slug' => ['required', 'string', 'max:100', 'unique:categories,slug,' . $id],
-            'name' => ['nullable', 'string', 'max:150'],
-            'icon' => ['nullable', 'string', 'max:150'],
-            'is_active' => ['boolean'],
+
+            // 'name' => [
+            //     // ✅ كله اختياري في التعديل
+            //     $isUpdate ? 'sometimes' : 'nullable',
+            //     'string',
+            //     'max:150',
+            // ],
+            'icon' => [
+                $isUpdate ? 'sometimes' : 'nullable',
+                'string',
+                'max:150',
+            ],
+            'is_active' => [
+                $isUpdate ? 'sometimes' : 'nullable',
+                'boolean',
+            ],
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'slug' => 'المعرف (slug)',
-            'name' => 'الاسم',
-            'icon' => 'الأيقونة',
+            // 'slug'      => 'المعرف (slug)',
+            // 'name'      => 'الاسم',
+            'icon'      => 'الأيقونة',
             'is_active' => 'مفعل',
         ];
     }
-    }
-
+}

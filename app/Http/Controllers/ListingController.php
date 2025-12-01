@@ -110,14 +110,14 @@ class ListingController extends Controller
         $rows = $q->get();
 
         // زيّدي views لكل النتائج (بالشُحنات)
-        if ($rows->isNotEmpty()) {
-            $ids = $rows->pluck('id');
-            $ids->chunk(1000)->each(function ($chunk) {
-                DB::table('listings')
-                    ->whereIn('id', $chunk)
-                    ->update(['views' => DB::raw('views + 1')]);
-            });
-        }
+        // if ($rows->isNotEmpty()) {
+        //     $ids = $rows->pluck('id');
+        //     $ids->chunk(1000)->each(function ($chunk) {
+        //         DB::table('listings')
+        //             ->whereIn('id', $chunk)
+        //             ->update(['views' => DB::raw('views + 1')]);
+        //     });
+        // }
 
         $supportsMakeModel = $sec->supportsMakeModel();
         $supportsSections = $sec->supportsSections();

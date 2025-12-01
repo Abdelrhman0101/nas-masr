@@ -14,6 +14,9 @@ class Category extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
     protected $appends = ['icon_url'];
 
     public function getIconUrlAttribute(): ?string

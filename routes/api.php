@@ -36,8 +36,8 @@ Route::get('makes', [MakeController::class, 'index']);
 Route::get('makes/{make}/models', [MakeController::class, 'models']);
 
 //public main category
-Route::get('/main-sections',[CategorySectionsController::class,'index']);
-Route::get('/sub-sections/{mainSection}',[CategorySectionsController::class,'subSections']);
+Route::get('/main-sections', [CategorySectionsController::class, 'index']);
+Route::get('/sub-sections/{mainSection}', [CategorySectionsController::class, 'subSections']);
 
 Route::get('/system-settings', [SystemSettingController::class, 'index']);
 
@@ -88,10 +88,12 @@ Route::prefix('admin')
         Route::post('categories', [CategoryController::class, 'store']);
         Route::put('categories/{category}', [CategoryController::class, 'update']);
         Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
+        //all categories for admin
+        Route::get('categories', [categoryController::class, 'index']);
 
         // System Settings Routes
         // Route::apiResource('system-settings', SystemSettingController::class);
-    
+
         // Admin Stats Route
         Route::get('stats', [StatsController::class, 'index']);
         Route::get('recent-activities', [StatsController::class, 'recentActivities']);
@@ -104,7 +106,7 @@ Route::prefix('admin')
         Route::delete('users/{user}', [UserController::class, 'deleteUser']);
         Route::patch('users/{user}/block', [UserController::class, 'blockedUser']);
         // Route::get('users/{user}/listings', [UserController::class, 'userListings']);
-    
+
         //Best Advertiser
         Route::post('/featured', [BestAdvertiserController::class, 'store']);
         Route::put('/disable/{bestAdvertiser}', [BestAdvertiserController::class, 'disable']);
@@ -137,12 +139,12 @@ Route::prefix('admin')
         Route::delete('models/{model}', [MakeController::class, 'deleteModel']);
 
 
-        Route::post('/main-section/{categorySlug}',[CategorySectionsController::class,'storeMain']);
-        Route::post('/sub-section/{mainSection}',[CategorySectionsController::class,'addSubSections']);
-        Route::put('/main-section/{mainSection}',[CategorySectionsController::class,'updateMain']);
-        Route::put('/sub-section/{subSection}',[CategorySectionsController::class,'updateSub']);
-        Route::delete('/main-section/{mainSection}',[CategorySectionsController::class,'destroyMain']);
-        Route::delete('/sub-section/{subSection}',[CategorySectionsController::class,'destroySub']);
+        Route::post('/main-section/{categorySlug}', [CategorySectionsController::class, 'storeMain']);
+        Route::post('/sub-section/{mainSection}', [CategorySectionsController::class, 'addSubSections']);
+        Route::put('/main-section/{mainSection}', [CategorySectionsController::class, 'updateMain']);
+        Route::put('/sub-section/{subSection}', [CategorySectionsController::class, 'updateSub']);
+        Route::delete('/main-section/{mainSection}', [CategorySectionsController::class, 'destroyMain']);
+        Route::delete('/sub-section/{subSection}', [CategorySectionsController::class, 'destroySub']);
     });
 
 Route::get('/all-cars', [CarController::class, 'index']);
