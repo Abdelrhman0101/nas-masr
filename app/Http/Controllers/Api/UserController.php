@@ -153,7 +153,7 @@ class UserController extends Controller
                 'note' => $expiresAt
                     ? ('تنتهي صلاحية الباقة بتاريخ ' . $expiresAt->translatedFormat('d/m/Y'))
                     : (
-                            // لو الباقة بدون مدة (days = 0) وفيها رصيد، مفيش تاريخ انتهاء
+                        // لو الباقة بدون مدة (days = 0) وفيها رصيد، مفيش تاريخ انتهاء
                         ($days === 0 && $total > 0)
                         ? 'باقة بدون مدة — تعتمد على الرصيد فقط'
                         : null
@@ -161,34 +161,62 @@ class UserController extends Controller
             ];
         };
 
+        // لو مفيش record نهائي في user_packages للمستخدم
         if (!$pkg) {
             return response()->json([
-                'packages' => [
-                    $makeCardLite('الباقة المتميزة', false, null, null, 0),
-                    $makeCardLite('الباقة القياسية', false, null, null, 0),
-                ],
-            ]);
+                "message" => "عذراً، لا توجد أي باقة مفعّلة على حسابك حالياً. من فضلك قم بالاشتراك في باقة جديدة حتى تستطيع نشر أو تمييز الإعلانات."
+            ], 422);
         }
 
-        // بيانات الـ featured
-        $featuredActive = (bool) $pkg->featured_active;                 // من الـ accessor بعد التعديلات
-        $featuredExp = $pkg->featured_expire_date;                   // Carbon|null
-        $featuredDays = (int) ($pkg->featured_days ?? 0);
-        $featuredTotal = (int) ($pkg->featured_ads ?? 0);
+        $packages = [];
 
-        // بيانات الـ standard
+        // ===== الباقة المتميزة =====
+        $featuredActive = (bool) $pkg->featured_active;
+        $featuredExp    = $pkg->featured_expire_date;         // Carbon|null
+        $featuredDays   = (int) ($pkg->featured_days ?? 0);
+        $featuredTotal  = (int) ($pkg->featured_ads ?? 0);
+
+        // نعتبر إن الباقة دي "موجودة" في الجدول لو فيه أي حاجة منها مش فاضية
+        $hasFeatured = $featuredDays > 0
+            || $featuredTotal > 0
+            || !is_null($featuredExp);
+
+        if ($hasFeatured) {
+            $packages[] = $makeCardLite(
+                'الباقة المتميزة',
+                $featuredActive,
+                $featuredExp,
+                $featuredDays,
+                $featuredTotal
+            );
+        }
+
+        // ===== الباقة القياسية =====
         $standardActive = (bool) $pkg->standard_active;
-        $standardExp = $pkg->standard_expire_date;
-        $standardDays = (int) ($pkg->standard_days ?? 0);
-        $standardTotal = (int) ($pkg->standard_ads ?? 0);
+        $standardExp    = $pkg->standard_expire_date;
+        $standardDays   = (int) ($pkg->standard_days ?? 0);
+        $standardTotal  = (int) ($pkg->standard_ads ?? 0);
 
+        $hasStandard = $standardDays > 0
+            || $standardTotal > 0
+            || !is_null($standardExp);
+
+        if ($hasStandard) {
+            $packages[] = $makeCardLite(
+                'الباقة الاستاندرد',
+                $standardActive,
+                $standardExp,
+                $standardDays,
+                $standardTotal
+            );
+        }
+
+        // في الآخر نرجّع بس الباقات اللي المستخدم فعلاً دخل فيها قبل كده
         return response()->json([
-            'packages' => [
-                $makeCardLite('الباقة المتميزة', $featuredActive, $featuredExp, $featuredDays, $featuredTotal),
-                $makeCardLite('الباقة القياسية', $standardActive, $standardExp, $standardDays, $standardTotal),
-            ],
+            'packages' => $packages,
         ]);
     }
+
 
     public function SetRankOne(Request $request)
     {
