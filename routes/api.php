@@ -72,7 +72,7 @@ Route::prefix('v1/{section}')->group(function () {
 
     // Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
     Route::middleware('auth:sanctum')->group(function () {
-        Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy','index','show']);
+        Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy', 'index', 'show']);
     });
 });
 
@@ -120,6 +120,7 @@ Route::prefix('admin')
         Route::post('/system-settings', [SystemSettingController::class, 'store']);
         //User packages
         Route::post('/user-packages', [PackagesController::class, 'storeOrUpdate']);
+        Route::get('/packages', [PackagesController::class, 'index']);
 
 
         Route::post('governorates', [GovernorateController::class, 'storeGov']);
@@ -177,4 +178,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::post('/notifications/read', [NotificationController::class, 'read']);
 });
-    Route::post('/settings/notifications', [UserController::class, 'updateNotificationSettings']);
+Route::post('/settings/notifications', [UserController::class, 'updateNotificationSettings']);

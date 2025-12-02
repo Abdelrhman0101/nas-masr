@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
+use App\Services\NotificationService;
 
 
 class UserController extends Controller
@@ -623,9 +624,20 @@ class UserController extends Controller
     //create admin otp
     public function createOtp(User $user)
     {
-        // $otp = rand(100000, 999999);
-        $user->otp = 1234;
+        // $user = Request()->user();
+        // if ($user->role == 'advertiser' || $user->role == 'user' || $user->role == 'representative'){
+
+        // }
+        $otp = rand(100000, 999999);
+        $user->otp = $otp;
         $user->save();
+        // $notifications->dispatch(
+        //     (int) $user->id,
+        //     'تم إنشاء رمز تحقق',
+        //     'تم إصدار رمز تحقق لحسابك.',
+        //     'system',
+        //     ['reason' => 'otp_created']
+        // );
         return response()->json(['message' => 'Otp created successfully', 'otp' => $user->otp]);
     }
 

@@ -30,12 +30,21 @@ class NotificationService
 
         $externalSent = false;
         if ($shouldSendExternal) {
-            $externalSent = $this->sendExternal($user, [
-                'title' => $title,
-                'body' => $body,
-                'type' => $type,
-                'data' => $data,
-            ]);
+            $key = "notif:last_external_sent:" . $user->id;
+            $last = Cache::get($key);
+            $cooldown = 120;
+            $nowTs = now()->timestamp;
+            if (!$last || ($nowTs - (int) $last) >= $cooldown) {
+                $externalSent = $this->sendExternal($user, [
+                    'title' => $title,
+                    'body' => $body,
+                    'type' => $type,
+                    'data' => $data,
+                ]);
+                if ($externalSent) {
+                    Cache::put($key, $nowTs, now()->addSeconds($cooldown));
+                }
+            }
         }
 
         return ['notification' => $notification, 'external_sent' => $externalSent];
@@ -46,4 +55,3 @@ class NotificationService
         return true;
     }
 }
-
