@@ -70,9 +70,9 @@ Route::prefix('v1/{section}')->group(function () {
 
     // Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
 
-    Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
+    // Route::apiResource('listings', ListingController::class)->only(['index', 'show']);
     Route::middleware('auth:sanctum')->group(function () {
-        Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy']);
+        Route::apiResource('listings', ListingController::class)->only(['store', 'update', 'destroy','index','show']);
     });
 });
 
