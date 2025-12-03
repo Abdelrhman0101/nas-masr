@@ -10,8 +10,14 @@ class CategoryPlanPrice extends Model
 
     protected $fillable = [
         'category_id',
-        'price_featured',
-        'price_standard',
+
+        'price_featured',      
+        'featured_ad_price', 
+        'featured_days',  
+
+        'price_standard',      
+        'standard_ad_price',   
+        'standard_days',       
     ];
 
     public function category()

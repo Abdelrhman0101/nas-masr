@@ -233,16 +233,16 @@ class ListingController extends Controller
         $paymentRequired = false;
         $packageData = null;
 
-        // if ($data['plan_type'] !== 'free') {
-        //     $packageResult = $this->consumeForPlan($user->id, $data['plan_type']);
-        //     $packageData   = $packageResult->getData(true);
+        if ($data['plan_type'] !== 'free') {
+            $packageResult = $this->consumeForPlan($user->id, $data['plan_type']);
+            $packageData   = $packageResult->getData(true);
 
-        //     if (empty($packageData['success']) || $packageData['success'] === false) {
-        //         $paymentRequired = true;
-        //     } else {
-        //         $data['expire_at'] = Carbon::parse($packageData['expire_date']);
-        //     }
-        // }
+            if (empty($packageData['success']) || $packageData['success'] === false) {
+                $paymentRequired = true;
+            } else {
+                $data['expire_at'] = Carbon::parse($packageData['expire_date']);
+            }
+        }
 
         if ($paymentRequired) {
             $data['status'] = 'Pending';
@@ -255,9 +255,9 @@ class ListingController extends Controller
                 $data['status'] = 'Valid';
                 $data['admin_approved'] = true;
                 $data['published_at'] = now();
-                // if ($data['plan_type'] == 'free') {
+                if ($data['plan_type'] == 'free') {
                 $data['expire_at'] = now()->addDays(365);
-                // }
+                }
             }
         }
 
@@ -269,7 +269,7 @@ class ListingController extends Controller
         if ($paymentRequired) {
             return response()->json([
                 'success' => false,
-                'message' => $packageData['message'] ?? 'لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.',
+                'message' =>  ' لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.او الاشتراك في باقه',
                 'payment_required' => true,
                 'listing_id' => $listing->id,
             ], 402);
