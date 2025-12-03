@@ -714,6 +714,7 @@ class UserController extends Controller
 
         $listing->save();
 
+        $paidAt = now();
         ListingPayment::updateOrCreate(
             ['listing_id' => $listing->id],
             [
@@ -722,7 +723,7 @@ class UserController extends Controller
                 'plan_type' => $plan,
                 'amount' => $amount,
                 'currency' => $listing->currency,
-                'paid_at' => now(),
+                'paid_at' => $paidAt,
                 'payment_reference' => $request->input('payment_reference'),
                 'status' => 'paid',
             ]
@@ -734,6 +735,7 @@ class UserController extends Controller
             'listing_id' => $listing->id,
             'amount' => $amount,
             'price' => $amount,
+            'paid_at' => $paidAt->toIso8601String(),
         ]);
     }
 }
