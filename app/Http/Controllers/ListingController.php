@@ -237,6 +237,7 @@ class ListingController extends Controller
         $activeSub = null;
         $paymentType = null;
         $paymentReference = null;
+        $paymentMethod = null;
         $priceOut = 0.0;
 
         if (!empty($data['plan_type']) && $data['plan_type'] !== 'free') {
@@ -255,7 +256,9 @@ class ListingController extends Controller
                 $data['expire_at'] = $activeSub->expires_at;
                 $paymentType = 'subscription';
                 $paymentReference = $activeSub->payment_reference;
+                $paymentMethod=$activeSub->payment_method;
                 $priceOut = (float) ($activeSub->price ?? 0);
+                $data['publish_via'] = env('LISTING_PUBLISH_VIA_SUBSCRIPTION', 'subscription');
             } else {
                 $packageResult = $this->consumeForPlan($user->id, $planNorm);
                 $packageData   = $packageResult->getData(true);
@@ -269,6 +272,7 @@ class ListingController extends Controller
                     $priceOut = $planNorm === 'featured'
                         ? (float) ($prices?->featured_ad_price ?? 0)
                         : (float) ($prices?->standard_ad_price ?? 0);
+                    $data['publish_via'] = env('LISTING_PUBLISH_VIA_PACKAGE', 'package');
                 }
             }
         }
@@ -290,6 +294,7 @@ class ListingController extends Controller
                 if (($data['plan_type'] ?? 'free') === 'free') {
                     $paymentType = 'free';
                     $priceOut = 0.0;
+                    $data['publish_via'] = env('LISTING_PUBLISH_VIA_FREE', 'free');
                 }
             }
         }
@@ -324,6 +329,7 @@ class ListingController extends Controller
                 'plan_type' => $data['plan_type'] ?? 'free',
                 'price' => $priceOut,
                 'payment_reference' => $paymentReference,
+                'payment_method'=>$paymentMethod,
                 'currency' => $listing->currency,
                 'user_id' => $user->id,
                 'subscribed_at' => $activeSub?->subscribed_at,
@@ -403,6 +409,12 @@ class ListingController extends Controller
         }
 
         $data = $request->validated();
+        if ($isAdmin) {
+            $adminComment = $request->input('admin_comment');
+            if ($adminComment !== null) {
+                $data['admin_comment'] = $adminComment;
+            }
+        }
 
         if ($request->hasFile('main_image')) {
             $data['main_image'] = $this->storeUploaded($request->file('main_image'), $section, 'main');

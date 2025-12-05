@@ -686,6 +686,11 @@ class UserController extends Controller
             ]);
         }
 
+        $request->validate([
+            'payment_method' => ['required', 'string', Rule::in(['instapay', 'wallet', 'visa'])],
+            'payment_reference' => ['nullable', 'string'],
+        ]);
+
         $prices = CategoryPlanPrice::where('category_id', $listing->category_id)->first();
         $plan = strtolower($listing->plan_type ?? 'standard');
         $amount = 0.0;
@@ -699,6 +704,7 @@ class UserController extends Controller
         }
 
         $listing->isPayment = true;
+        $listing->publish_via = env('LISTING_PUBLISH_VIA_AD_PAYMENT', 'ad_payment');
 
         $manualApprove = Cache::remember('settings:manual_approval', now()->addHours(6), function () {
             $val = SystemSetting::where('key', 'manual_approval')->value('value');
@@ -724,8 +730,9 @@ class UserController extends Controller
                 'amount' => $amount,
                 'currency' => $listing->currency,
                 'paid_at' => $paidAt,
-                'payment_reference' => $request->input('payment_reference'),
+                'payment_reference' => $request->input('payment_reference')??'<transaction-id-from-gateway>',
                 'status' => 'paid',
+                'payment_method' => $request->input('payment_method'),
             ]
         );
 

@@ -105,6 +105,8 @@ class ListingResource extends JsonResource
             'updated_at' => $this->updated_at,
             'expire_at' => $this->expire_at ?? "قيد الانتظار",
             'isPayment' => $this->isPayment,
+            'publish_via'=>$this->publish_via,
+            'admin_comment'=>$this->admin_comment??"لا توجد اي تعليقات من قبل الادمن ",
         ];
     }
 

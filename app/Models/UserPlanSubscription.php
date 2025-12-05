@@ -20,6 +20,7 @@ class UserPlanSubscription extends Model
         'ad_price',
         'payment_status',
         'payment_reference',
+        'payment_method',
     ];
 
     protected $casts = [
@@ -40,4 +41,3 @@ class UserPlanSubscription extends Model
         return $this->belongsTo(Category::class);
     }
 }
-

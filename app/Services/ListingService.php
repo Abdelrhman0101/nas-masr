@@ -52,6 +52,7 @@ class ListingService
                 'isPayment',
                 'main_section_id',
                 'sub_section_id',
+                'publish_via'
 
             ]);
 

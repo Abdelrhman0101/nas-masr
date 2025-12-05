@@ -4,14 +4,19 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Listing;
+use App\Models\CategoryPlanPrice;
+use App\Models\UserPlanSubscription;
+use App\Models\UserPackages;
 use App\Models\SystemSetting;
 use App\Models\Category;
 use App\Models\CategoryField;
+use App\Http\Resources\ListingResource;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 class StatsController extends Controller
 {
@@ -241,5 +246,102 @@ class StatsController extends Controller
             ],
             'users' => $data,
         ]);
+    }
+
+    public function pendingListings(Request $request): JsonResponse
+    {
+        $perPage = (int) $request->query('per_page', 50);
+        $listings = Listing::query()
+            ->where('status', 'Pending')
+            ->with(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection'])
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+
+        $items = ListingResource::collection(collect($listings->items()));
+
+        return response()->json([
+            'meta' => [
+                'page' => $listings->currentPage(),
+                'per_page' => $listings->perPage(),
+                'total' => $listings->total(),
+                'last_page' => $listings->lastPage(),
+            ],
+            'listings' => $items,
+        ]);
+    }
+
+    public function approveListing(Request $request, Listing $listing): JsonResponse
+    {
+        // if ($listing->status !== 'Pending') {
+        //     return response()->json(['message' => 'listing_not_pending'], 400);
+        // }
+
+        $plan = strtolower($listing->plan_type);
+        $publishVia = $listing->publish_via ?? env('LISTING_PUBLISH_VIA_FREE', 'free');
+        $expireTs = null;
+        if ($publishVia === env('LISTING_PUBLISH_VIA_SUBSCRIPTION', 'subscription')) {
+            $sub = UserPlanSubscription::query()
+                ->where('user_id', $listing->user_id)
+                ->where('category_id', $listing->category_id)
+                ->where('plan_type', $plan)
+                ->where('payment_status', 'paid')
+                ->orderByDesc('id')
+                ->first();
+            if ($sub ) {
+                $expireTs = $sub->expires_at;
+            }
+        }
+        else if (!$expireTs && $publishVia === env('LISTING_PUBLISH_VIA_PACKAGE', 'package')) {
+            $pkg = UserPackages::where('user_id', $listing->user_id)->first();
+            if ($pkg) {
+                if ($plan === 'featured') {
+                    $expireTs = $pkg->featured_expire_date; // null means unlimited
+                } elseif ($plan === 'standard') {
+                    $expireTs = $pkg->standard_expire_date;  // null means unlimited
+                }
+            }
+        }
+        else{
+                $days = 365;
+            $expireTs = now()->copy()->addDays($days);
+        }
+
+        $listing->status = 'Valid';
+        $listing->admin_approved = true;
+        $listing->published_at = now();
+        $listing->expire_at = $expireTs;
+
+        // $comment = $request->input('admin_comment');
+        // if ($comment !== null) {
+            $listing->admin_comment =null;
+        // }
+
+        $listing->save();
+
+        return response()->json(new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection'])));
+        // return Response()->json([
+        //     'data'=>[
+        //         'expire_at'=>$expireTs,
+        //         'publishVia'=>$sub
+        //     ]
+        // ]);
+    }
+
+    public function rejectListing(Request $request, Listing $listing): JsonResponse
+    {
+        // if ($listing->status !== 'Pending') {
+        //     return response()->json(['message' => 'listing_not_pending'], 400);
+        // }
+
+        $data = $request->validate([
+            'reason' => ['required', 'string'],
+        ]);
+
+        $listing->status = 'Rejected';
+        $listing->admin_approved = false;
+        $listing->admin_comment = $data['reason'];
+        $listing->save();
+
+        return response()->json(new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection'])));
     }
 }

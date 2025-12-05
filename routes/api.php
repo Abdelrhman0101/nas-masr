@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\Admin\StatsController;
+use App\Http\Controllers\Admin\TransactionsController;
 use App\Http\Controllers\BestAdvertiserController;
 use App\Models\Listing as ListingModel;
 use App\Http\Controllers\Admin\GovernorateController;
@@ -55,8 +56,13 @@ Route::get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
 Route::prefix('v1/{section}')->group(function () {
     Route::bind('listing', function ($value) {
         $section = request()->route('section');
-        $sec = Section::fromSlug($section);
-        return ListingModel::where('id', $value)->where('category_id', $sec->id())->firstOrFail();
+        if (is_string($section) && $section !== '') {
+            $sec = Section::fromSlug($section);
+            return ListingModel::where('id', $value)
+                ->where('category_id', $sec->id())
+                ->firstOrFail();
+        }
+        return ListingModel::findOrFail($value);
     });
 
     Route::get('ping', function (string $section) {
@@ -106,6 +112,10 @@ Route::prefix('admin')
         Route::get('stats', [StatsController::class, 'index']);
         Route::get('recent-activities', [StatsController::class, 'recentActivities']);
         Route::get('users-summary', [StatsController::class, 'usersSummary']);
+        Route::get('pending-listings', [StatsController::class, 'pendingListings']);
+        Route::patch('listings/{listing}/approve', [StatsController::class, 'approveListing']);
+        Route::patch('listings/{listing}/reject', [StatsController::class, 'rejectListing']);
+        Route::get('transactions', [TransactionsController::class, 'index']);
 
         // Admin Users management
         Route::get('users/{user}', [UserController::class, 'showUserWithListings']);

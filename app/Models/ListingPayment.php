@@ -19,6 +19,7 @@ class ListingPayment extends Model
         'paid_at',
         'payment_reference',
         'status',
+        'payment_method'
     ];
 
     protected $casts = [
