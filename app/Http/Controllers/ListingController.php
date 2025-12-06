@@ -344,7 +344,7 @@ class ListingController extends Controller
                 'message' =>  ' لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.او الاشتراك في باقه',
                 'payment_required' => true,
                 'listing_id' => $listing->id,
-                'count'=>$userFreeCount,
+                // 'count'=>$userFreeCount,
             ], 402);
         }
 
