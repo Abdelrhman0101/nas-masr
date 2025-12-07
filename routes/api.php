@@ -114,6 +114,8 @@ Route::prefix('admin')
         Route::get('users-summary', [StatsController::class, 'usersSummary']);
         Route::get('pending-listings', [StatsController::class, 'pendingListings']);
         Route::get('ads-not-payment', [StatsController::class, 'adsNOTPayment']);
+        Route::get('published-listings', [StatsController::class, 'publishedListings']);
+        Route::get('rejected-listings', [StatsController::class, 'rejectedListings']);
         Route::patch('listings/{listing}/approve', [StatsController::class, 'approveListing']);
         Route::patch('listings/{listing}/reject', [StatsController::class, 'rejectListing']);
         Route::get('transactions', [TransactionsController::class, 'index']);

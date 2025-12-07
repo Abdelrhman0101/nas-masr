@@ -12,6 +12,7 @@ use App\Models\Category;
 use App\Models\CategoryField;
 use App\Http\Resources\ListingResource;
 use App\Services\NotificationService;
+use App\Support\Section;
 use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -278,13 +279,83 @@ class StatsController extends Controller
         $perPage = (int) $request->query('per_page', 50);
         $listings = Listing::query()
             ->where('status', 'Pending')
-            ->where('publish_via',null)
-            ->where('isPayment',false)
+            ->where('publish_via', null)
+            ->where('isPayment', false)
             ->with(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection', 'user'])
             ->orderByDesc('created_at')
             ->paginate($perPage);
 
         $items = ListingResource::collection(collect($listings->items()));
+
+        return response()->json([
+            'meta' => [
+                'page' => $listings->currentPage(),
+                'per_page' => $listings->perPage(),
+                'total' => $listings->total(),
+                'last_page' => $listings->lastPage(),
+            ],
+            'listings' => $items,
+        ]);
+    }
+
+    public function publishedListings(Request $request): JsonResponse
+    {
+        $perPage = (int) $request->query('per_page', 20);
+        $listings = Listing::query()
+            ->where('status', 'Valid')
+            ->with(['user'])
+            ->orderByDesc('published_at')
+            ->paginate($perPage);
+
+        $items = collect($listings->items())->map(function (Listing $l) {
+            $sec = Section::fromId((int) $l->category_id);
+            return [
+                'status' => 'منشور',
+                'category_name' => $sec?->name,
+                'published_at' => optional($l->published_at)->toDateString(),
+                'expire_at' => optional($l->expire_at)->toDateString(),
+                'plan_type' => $l->plan_type,
+                'price' => (float) ($l->price ?? 0),
+                'views' => (int) ($l->views ?? 0),
+                'advertiser_id' => (int) $l->user_id,
+                'advertiser_phone' => $l->relationLoaded('user') && $l->user ? $l->user->phone : null,
+            ];
+        })->values();
+
+        return response()->json([
+            'meta' => [
+                'page' => $listings->currentPage(),
+                'per_page' => $listings->perPage(),
+                'total' => $listings->total(),
+                'last_page' => $listings->lastPage(),
+            ],
+            'listings' => $items,
+        ]);
+    }
+
+    public function rejectedListings(Request $request): JsonResponse
+    {
+        $perPage = (int) $request->query('per_page', 50);
+        $listings = Listing::query()
+            ->where('status', 'Rejected')
+            ->with(['user'])
+            ->orderByDesc('updated_at')
+            ->paginate($perPage);
+
+        $items = collect($listings->items())->map(function (Listing $l) {
+            $sec = Section::fromId((int) $l->category_id);
+            return [
+                'status' => 'مرفوض',
+                'category_name' => $sec?->name,
+                'created_at' => optional($l->created_at)->toDateString(),
+                'expire_at' => optional($l->expire_at)->toDateString(),
+                'rejected_by' => 'مشرف النظام',
+                'rejection_reason' => $l->admin_comment,
+                'advertiser_id' => (int) $l->user_id,
+                'advertiser_phone' => $l->relationLoaded('user') && $l->user ? $l->user->phone : null,
+                'views' => (int) ($l->views ?? 0),
+            ];
+        })->values();
 
         return response()->json([
             'meta' => [
@@ -351,6 +422,8 @@ class StatsController extends Controller
         //     ]
         // ]);
     }
+    //Admin  accsept ads not payment
+    public function AcceptAdsNotPayment(Request $request) {}
 
     public function rejectListing(Request $request, Listing $listing): JsonResponse
     {
