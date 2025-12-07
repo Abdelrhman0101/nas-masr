@@ -9,6 +9,15 @@ class CarMakesModelsSeeder extends Seeder
 {
     public function run(): void
     {
+        // لو عندك علاقات Foreign Keys بين models و makes
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
+        // امسح القديم
+        DB::table('models')->truncate();
+        DB::table('makes')->truncate();
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         $makes = [
             'هيونداي'   => ['إلنترا', 'أكسنت', 'توسان', 'سوناتا'],
             'كيا'       => ['سيراتو', 'سبورتاج', 'بيكانتو', 'كارنفال'],
@@ -20,30 +29,19 @@ class CarMakesModelsSeeder extends Seeder
         ];
 
         foreach ($makes as $makeName => $models) {
-            $makeId = DB::table('makes')->where('name', $makeName)->value('id');
+            $makeId = DB::table('makes')->insertGetId([
+                'name'       => $makeName,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-            if (!$makeId) {
-                $makeId = DB::table('makes')->insertGetId([
-                    'name' => $makeName,
+            foreach ($models as $modelName) {
+                DB::table('models')->insert([
+                    'make_id'    => $makeId,
+                    'name'       => $modelName,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-            }
-
-            foreach ($models as $modelName) {
-                $exists = DB::table('models')
-                    ->where('make_id', $makeId)
-                    ->where('name', $modelName)
-                    ->exists();
-
-                if (!$exists) {
-                    DB::table('models')->insert([
-                        'make_id' => $makeId,
-                        'name' => $modelName,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
             }
         }
     }
