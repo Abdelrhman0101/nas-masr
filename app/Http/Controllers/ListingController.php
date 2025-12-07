@@ -256,7 +256,7 @@ class ListingController extends Controller
                 $data['expire_at'] = $activeSub->expires_at;
                 $paymentType = 'subscription';
                 $paymentReference = $activeSub->payment_reference;
-                $paymentMethod=$activeSub->payment_method;
+                $paymentMethod = $activeSub->payment_method;
                 $priceOut = (float) ($activeSub->price ?? 0);
                 $data['publish_via'] = env('LISTING_PUBLISH_VIA_SUBSCRIPTION', 'subscription');
             } else {
@@ -265,6 +265,7 @@ class ListingController extends Controller
 
                 if (empty($packageData['success']) || $packageData['success'] === false) {
                     $paymentRequired = true;
+                    $message = ' لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.او الاشتراك في باقه';
                 } else {
                     $data['expire_at'] = Carbon::parse($packageData['expire_date']);
                     $paymentType = 'package';
@@ -275,7 +276,7 @@ class ListingController extends Controller
                     $data['publish_via'] = env('LISTING_PUBLISH_VIA_PACKAGE', 'package');
                 }
             }
-        }else{
+        } else {
             $freeCount = Cache::remember('settings:free_ads_count', now()->addHours(6), function () {
                 return (int) (SystemSetting::where('key', 'free_ads_count')->value('value') ?? 0);
             });
@@ -298,16 +299,30 @@ class ListingController extends Controller
 
             if ($overCount || $overPrice) {
                 $paymentRequired = true;
-                // $data['plan_type'] = $data['plan_type'] ?? 'standard';
-                // $data['publish_via'] = env('LISTING_PUBLISH_VIA_AD_PAYMENT', 'ad_payment');
-                // $prices = CategoryPlanPrice::where('category_id', $sec->id())->first();
-                // $priceOut = (float) ($prices?->standard_ad_price ?? 0);
-                // $paymentType = 'ad_payment';
+
+                $message = null;
+
+                if ($overCount && $overPrice) {
+                    return Response()->json([
+                        'success' => false,
+                        'message' => ' لقد تجاوزت الحد الأقصى لعدد الإعلانات المجانية في هذا القسم، كما أن سعر هذا الإعلان أعلى من الحد المسموح به للإعلان المجاني. لنشر هذا الإعلان، يُرجى الاشتراك في باقة مدفوعة أو دفع تكلفة إعلان منفرد مع تغير نوع الخطه  لهذا الاعلان .',
+                    ], 402);
+                } elseif ($overCount) {
+                    return Response()->json([
+                        'success' => false,
+                        'message' => ' لقد تجاوزت الحد الأقصى لعدد الإعلانات المجانية المسموح بها في هذا القسم. لنشر المزيد من الإعلانات، يُرجى الاشتراك في باقة مدفوعة أو دفع تكلفة إعلان منفرد. مع تغير نوع الخطه  لهذا الاعلان'
+
+                    ], 402);
+                } elseif ($overPrice) {
+                    return Response()->json([
+                        'success' => false,
+                        'message' => 'سعر هذا الإعلان أعلى من الحد الأقصى المسموح به للإعلان المجاني في هذا القسم. يمكنك إمّا تخفيض السعر ليتوافق مع الحد المجاني أو الاشتراك في باقة مدفوعة لنشر الإعلان. مع تغير نوع الخطه  لهذا الاعلان'
+                    ], 402);
+                }
             } else {
                 $data['publish_via'] = $freeVia;
                 $paymentType = 'free';
                 $priceOut = 0.0;
-                
             }
         }
 
@@ -341,7 +356,7 @@ class ListingController extends Controller
         if ($paymentRequired) {
             return response()->json([
                 'success' => false,
-                'message' =>  ' لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.او الاشتراك في باقه',
+                'message' =>  $message,
                 'payment_required' => true,
                 'listing_id' => $listing->id,
                 // 'count'=>$userFreeCount,
@@ -364,7 +379,7 @@ class ListingController extends Controller
                 'plan_type' => $data['plan_type'] ?? 'free',
                 'price' => $priceOut,
                 'payment_reference' => $paymentReference,
-                'payment_method'=>$paymentMethod,
+                'payment_method' => $paymentMethod,
                 'currency' => $listing->currency,
                 'user_id' => $user->id,
                 'subscribed_at' => $activeSub?->subscribed_at,
@@ -392,8 +407,7 @@ class ListingController extends Controller
         $banner = null;
         if ($sec->slug == "real_estate") {
             $banner = "storage/uploads/banner/796c4c36d93281ccfb0cac71ed31e5d1b182ae79.png";
-        }
-        ;
+        };
 
         $owner = User::select('id', 'name', 'created_at')->find($listing->user_id);
         $adsCount = Listing::where('user_id', $listing->user_id)->count();
@@ -419,8 +433,8 @@ class ListingController extends Controller
                 'subSection',
             ])
         ))->additional([
-                    'user' => $userPayload,
-                ]);
+            'user' => $userPayload,
+        ]);
     }
 
     protected function userIsAdmin($user): bool

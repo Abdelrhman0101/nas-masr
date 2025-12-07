@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Section;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -83,6 +84,11 @@ class Listing extends Model
     public function model()
     {
         return $this->belongsTo(CarModel::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
     // app/Models/Listing.php
 

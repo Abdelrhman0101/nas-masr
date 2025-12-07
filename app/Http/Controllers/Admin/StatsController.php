@@ -11,6 +11,8 @@ use App\Models\SystemSetting;
 use App\Models\Category;
 use App\Models\CategoryField;
 use App\Http\Resources\ListingResource;
+use App\Services\NotificationService;
+use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -253,7 +255,7 @@ class StatsController extends Controller
         $perPage = (int) $request->query('per_page', 50);
         $listings = Listing::query()
             ->where('status', 'Pending')
-            ->with(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection'])
+            ->with(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection', 'user'])
             ->orderByDesc('created_at')
             ->paginate($perPage);
 
@@ -341,6 +343,17 @@ class StatsController extends Controller
         $listing->admin_approved = false;
         $listing->admin_comment = $data['reason'];
         $listing->save();
+        app(NotificationService::class)->dispatch(
+            (int) $listing->user_id,
+            'تم رفض إعلانك',
+            'تم رفض إعلانك #' . $listing->id . ' من الإدارة. السبب: ' . $data['reason'],
+            'الاداره',
+            [
+                'listing_id' => (int) $listing->id,
+                'reason' => $data['reason'],
+                'status' => 'Rejected',
+            ]
+        );
 
         return response()->json(new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection'])));
     }

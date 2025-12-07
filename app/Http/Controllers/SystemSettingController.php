@@ -79,7 +79,6 @@ class SystemSettingController extends Controller
         return (string) $value;
     }
 
-    // قبل الإخراج: Typed فعلي للفرونت
     protected function castForOutput(string $type, ?string $value)
     {
         return match ($type) {
@@ -89,7 +88,6 @@ class SystemSettingController extends Controller
         };
     }
 
-    // نسيان الكاش للمفتاح + التجمّع (لو بتستخدمه)
     protected function forgetCache(string $key): void
     {
         Cache::forget("settings:{$key}");
@@ -137,8 +135,12 @@ class SystemSettingController extends Controller
                 ]
             );
 
-            // مهم: امسح الكاش فورًا (بما فيه featured_users_count)
             $this->forgetCache($key);
+
+            $ttl = now()->addHours(6);
+            $cacheKey = "settings:{$key}";
+            $cachedVal = $this->castForOutput($type, $this->castForStorage($key, $value));
+            Cache::put($cacheKey, $cachedVal, $ttl);
         }
 
         return response()->json([
@@ -186,6 +188,11 @@ class SystemSettingController extends Controller
 
             // مهم: امسح الكاش فورًا
             $this->forgetCache($key);
+
+            $ttl = now()->addHours(6);
+            $cacheKey = "settings:{$key}";
+            $cachedVal = $this->castForOutput($type, $this->castForStorage($key, $value));
+            Cache::put($cacheKey, $cachedVal, $ttl);
         }
 
         return response()->json(['status' => 'ok']);

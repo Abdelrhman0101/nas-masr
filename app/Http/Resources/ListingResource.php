@@ -107,6 +107,11 @@ class ListingResource extends JsonResource
             'isPayment' => $this->isPayment,
             'publish_via'=>$this->publish_via,
             'admin_comment'=>$this->admin_comment??"لا توجد اي تعليقات من قبل الادمن ",
+            'user' => [
+                'id' => (int) $this->user_id,
+                'name' => ($this->relationLoaded('user') && $this->user) ? $this->user->name : null,
+                'phone' => ($this->relationLoaded('user') && $this->user) ? $this->user->phone : null,
+            ],
         ];
     }
 
