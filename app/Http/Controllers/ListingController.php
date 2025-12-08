@@ -421,15 +421,18 @@ class ListingController extends Controller
 
         $listing->increment('views');
         $viewer = request()->user();
-        if ($viewer && $viewer->id !== $listing->user_id) {
-            $notifications->dispatch(
-                (int) $listing->user_id,
-                'تمت مشاهدة إعلانك',
-                'قام المستخدم #' . $viewer->id . ' بمشاهدة إعلانك #' . $listing->id,
-                'view',
-                ['viewer_id' => (int) $viewer->id, 'listing_id' => (int) $listing->id]
-            );
+        if ($viewer->role != 'admin') {
+            if ($viewer && $viewer->id !== $listing->user_id) {
+                $notifications->dispatch(
+                    (int) $listing->user_id,
+                    'تمت مشاهدة إعلانك',
+                    'قام المستخدم #' . $viewer->id . ' بمشاهدة إعلانك #' . $listing->id,
+                    'view',
+                    ['viewer_id' => (int) $viewer->id, 'listing_id' => (int) $listing->id]
+                );
+            }
         }
+
         $banner = null;
         if ($sec->slug == "real_estate") {
             $banner = "storage/uploads/banner/796c4c36d93281ccfb0cac71ed31e5d1b182ae79.png";
