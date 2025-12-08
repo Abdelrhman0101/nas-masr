@@ -375,7 +375,11 @@ class StatsController extends Controller
         // }
 
         $plan = strtolower($listing->plan_type);
-        $publishVia = $listing->publish_via ?? env('LISTING_PUBLISH_VIA_FREE', 'free');
+        $publishVia = $listing->publish_via ?? env('LISTING_PUBLISH_VIA_ADMIN_APPROVAL', 'admin_approval');
+        if ($listing->publish_via == null) {
+            $listing->publish_via = $publishVia;
+        }
+
         $expireTs = null;
         if ($publishVia === env('LISTING_PUBLISH_VIA_SUBSCRIPTION', 'subscription')) {
             $sub = UserPlanSubscription::query()
@@ -397,6 +401,18 @@ class StatsController extends Controller
                     $expireTs = $pkg->standard_expire_date;  // null means unlimited
                 }
             }
+        } else if (!$expireTs && $publishVia === env('LISTING_PUBLISH_VIA_ADMIN_APPROVAL', 'admin_approval')) {
+            $pkg = UserPackages::where('user_id', $listing->user_id)->first();
+            if ($pkg) {
+                if ($plan === 'featured') {
+                    $expireTs = $pkg->featured_expire_date; // null means unlimited
+                } elseif ($plan === 'standard') {
+                    $expireTs = $pkg->standard_expire_date;  // null means unlimited
+                }
+            } else {
+                $days = 365;
+                $expireTs = now()->copy()->addDays($days);
+            }
         } else {
             $days = 365;
             $expireTs = now()->copy()->addDays($days);
@@ -411,7 +427,13 @@ class StatsController extends Controller
         // if ($comment !== null) {
         $listing->admin_comment = null;
         // }
-
+        app(NotificationService::class)->dispatch(
+            (int) $listing->user_id,
+            'تمت الموافقة على إعلانك',
+            'تمت الموافقة على إعلانك #' . $listing->id . ' وهو الآن منشور.',
+            'الاداره',
+            ['listing_id' => (int) $listing->id, 'status' => 'Valid']
+        );
         $listing->save();
 
         return response()->json(new ListingResource($listing->load(['attributes', 'governorate', 'city', 'make', 'model', 'mainSection', 'subSection'])));
