@@ -61,6 +61,11 @@ class Listing extends Model
 
     /* ===================== العلاقات ===================== */
 
+    public function reports(): HasMany
+    {
+        return $this->hasMany(ListingReport::class);
+    }
+
     public function attributes(): HasMany
     {
         return $this->hasMany(ListingAttribute::class);

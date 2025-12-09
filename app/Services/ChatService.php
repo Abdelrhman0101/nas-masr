@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\UserConversation;
 use Illuminate\Support\Str;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ChatService
@@ -203,19 +203,29 @@ class ChatService
         return $latestMessages->map(function ($message) use ($user) {
             // Determine the other party in the conversation
             $otherParty = null;
-            if ($message->sender_id === $user->id && $message->sender_type === User::class) {
+            $isSentByMe = $message->sender_id === $user->id && $message->sender_type === User::class;
+            
+            if ($isSentByMe) {
                 $otherParty = $message->receiver;
             } else {
                 $otherParty = $message->sender;
             }
+
+            // is_read logic:
+            // - If I sent the last message, consider it "read" (I already saw it)
+            // - If I received the last message, check if read_at is set
+            $isRead = $isSentByMe ? true : $message->isRead();
 
             return [
                 'conversation_id' => $message->conversation_id,
                 'type' => $message->type,
                 'last_message' => $message->message,
                 'last_message_at' => $message->created_at,
-                'is_read' => $message->isRead(),
-                'other_party' => $otherParty,
+                'is_read' => $isRead,
+                'other_party' => $otherParty ? [
+                    'id' => $otherParty->id,
+                    'name' => $otherParty->name,
+                ] : null,
                 'unread_count' => $this->getUnreadCount($message->conversation_id, $user),
             ];
         });

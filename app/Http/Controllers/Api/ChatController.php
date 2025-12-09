@@ -73,6 +73,26 @@ class ChatController extends Controller
         $conversationId = $this->chatService->getConversationId($currentUser, $user);
         $this->chatService->markConversationAsRead($conversationId, $currentUser);
 
+        // Format messages to protect sensitive user data
+        $formattedMessages = collect($messages->items())->map(function ($message) {
+            return [
+                'id' => $message->id,
+                'conversation_id' => $message->conversation_id,
+                'sender' => $message->sender ? [
+                    'id' => $message->sender->id,
+                    'name' => $message->sender->name,
+                ] : null,
+                'receiver' => $message->receiver ? [
+                    'id' => $message->receiver->id,
+                    'name' => $message->receiver->name,
+                ] : null,
+                'message' => $message->message,
+                'read_at' => $message->read_at,
+                'type' => $message->type,
+                'created_at' => $message->created_at,
+            ];
+        });
+
         return response()->json([
             'meta' => [
                 'conversation_id' => $conversationId,
@@ -81,7 +101,7 @@ class ChatController extends Controller
                 'total' => $messages->total(),
                 'last_page' => $messages->lastPage(),
             ],
-            'data' => $messages->items(),
+            'data' => $formattedMessages,
         ]);
     }
 
@@ -143,6 +163,29 @@ class ChatController extends Controller
         // Mark as read
         $this->chatService->markConversationAsRead($conversationId, $user);
 
+        // Format messages to protect sensitive data
+        $formattedMessages = collect($messages->items())->map(function ($message) use ($user) {
+            // Check if message is from current user or from support team
+            $isFromMe = $message->sender_id === $user->id && $message->sender_type === User::class;
+            
+            return [
+                'id' => $message->id,
+                'conversation_id' => $message->conversation_id,
+                'sender' => $isFromMe ? [
+                    'id' => $user->id,
+                    'name' => $user->name ?? 'أنت',
+                    'is_support' => false,
+                ] : [
+                    'id' => $message->sender_id,
+                    'name' => 'فريق الدعم',
+                    'is_support' => true,
+                ],
+                'message' => $message->message,
+                'read_at' => $message->read_at,
+                'created_at' => $message->created_at,
+            ];
+        });
+
         return response()->json([
             'meta' => [
                 'conversation_id' => $conversationId,
@@ -151,7 +194,7 @@ class ChatController extends Controller
                 'total' => $messages->total(),
                 'last_page' => $messages->lastPage(),
             ],
-            'data' => $messages->items(),
+            'data' => $formattedMessages,
         ]);
     }
 

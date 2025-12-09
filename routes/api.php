@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\PlansController;
+use App\Http\Controllers\ListingReportController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('v1/test', fn() => response()->json(['ok' => true]));
@@ -177,6 +178,12 @@ Route::prefix('admin')
         Route::get('category-plan-prices', [CategoryPlanPricesController::class, 'index']);
         Route::post('category-plan-prices', [CategoryPlanPricesController::class, 'store']);
 
+        // Listing Reports (Admin)
+        Route::get('listing-reports', [ListingReportController::class, 'index']);
+        Route::post('listing-reports/{listing}/accept', [ListingReportController::class, 'acceptReport']);
+        Route::post('listing-reports/{listing}/dismiss', [ListingReportController::class, 'dismissReport']);
+        Route::delete('listing-reports/{report}', [ListingReportController::class, 'destroy']);
+
         // Admin Support Chat Routes (Unified Inbox)
         Route::prefix('support')->group(function () {
             Route::get('/inbox', [AdminChatController::class, 'supportInbox']);
@@ -234,6 +241,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/read', [NotificationController::class, 'read']);
     Route::post('/plan-subscriptions', [SubscriptionController::class, 'subscribe']);
     Route::get('/my-subscription', [SubscriptionController::class, 'mySubscription']);
+
+    // Reporting Routes
+    Route::post('/listings/{listing}/report', [ListingReportController::class, 'store']);
 
     // Chat Routes
     Route::prefix('chat')->group(function () {
