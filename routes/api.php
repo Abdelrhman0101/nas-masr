@@ -58,6 +58,9 @@ Route::get('users/{user}', [UserController::class, 'showUserWithListings']);
 //get public  listing best
 Route::get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
 
+// Global Search across all listings
+Route::get('/listings/search', [ListingController::class, 'globalSearch']);
+
 Route::prefix('v1/{section}')->group(function () {
     Route::bind('listing', function ($value) {
         $section = request()->route('section');
@@ -184,6 +187,7 @@ Route::prefix('admin')
         Route::post('listing-reports/{listing}/accept', [ListingReportController::class, 'acceptReport']);
         Route::post('listing-reports/{listing}/dismiss', [ListingReportController::class, 'dismissReport']);
         // Route::post('listing-reports/{listing}/reopen', [ListingReportController::class, 'reopen']);
+        Route::patch('listing-reports/{id}/read', [ListingReportController::class, 'markAsRead']);
         Route::delete('listing-reports/{report}', [ListingReportController::class, 'destroy']);
 
         // Admin Support Chat Routes (Unified Inbox)
