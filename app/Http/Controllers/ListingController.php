@@ -167,8 +167,8 @@ class ListingController extends Controller
                 'price' => $item->price,
                 'contact_phone' => $item->contact_phone,
                 'whatsapp_phone' => $item->whatsapp_phone,
-                'main_image_url' => ($categorySlug === 'jobs')
-                    ? ( asset('storage/' . \Illuminate\Support\Facades\Cache::remember('settings:jobs_default_image', now()->addHours(6), fn() => \App\Models\SystemSetting::where('key', 'jobs_default_image')->value('value') ?? 'defaults/jobs_default.png')) )
+                'main_image_url' => ($categorySlug === 'jobs' || $categorySlug === 'doctors' || $categorySlug === 'teachers')
+                    ? ( asset('storage/' . \Illuminate\Support\Facades\Cache::remember("settings:{$categorySlug}_default_image", now()->addHours(6), fn() => \App\Models\SystemSetting::where('key', "{$categorySlug}_default_image")->value('value') ?? "defaults/{$categorySlug}_default.png")) )
                     : ($item->main_image ? asset('storage/' . $item->main_image) : null),
                 'created_at' => $item->created_at,
                 'plan_type' => $item->plan_type,

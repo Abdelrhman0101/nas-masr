@@ -91,8 +91,8 @@ class BestAdvertiserController extends Controller
                 $catName = $lSec?->name ?? null;
 
                 $byUser[$row->user_id][] = [
-                    'main_image_url' => ($section === 'jobs')
-                        ? ( asset('storage/' . \Illuminate\Support\Facades\Cache::remember('settings:jobs_default_image', now()->addHours(6), fn() => \App\Models\SystemSetting::where('key', 'jobs_default_image')->value('value') ?? 'defaults/jobs_default.png')) )
+                    'main_image_url' => ($section === 'jobs' || $section === 'doctors' || $section === 'teachers')
+                        ? ( asset('storage/' . \Illuminate\Support\Facades\Cache::remember("settings:{$section}_default_image", now()->addHours(6), fn() => \App\Models\SystemSetting::where('key', "{$section}_default_image")->value('value') ?? "defaults/{$section}_default.png")) )
                         : ($listing->main_image ? asset('storage/' . $listing->main_image) : null),
                     'governorate'    => $govName,
                     'city'           => $cityName,

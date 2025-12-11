@@ -150,7 +150,7 @@ final class Section
             'lng' => ['required', 'numeric'],
             'address' => ['required', 'string', 'max:255'],
 
-            'main_image' => $this->slug === 'jobs' 
+            'main_image' => ($this->slug === 'jobs' || $this->slug === 'doctors' || $this->slug === 'teachers')
                 ? ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120']
                 : ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'images' => ['nullable', 'array', 'max:20'],

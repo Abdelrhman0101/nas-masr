@@ -11,11 +11,12 @@ class ListingResource extends JsonResource
     {
         $categorySlug = $this->category_id ? Section::fromId($this->category_id)?->slug : null;
 
-        if ($categorySlug === 'jobs') {
+        if ($categorySlug === 'jobs' || $categorySlug === 'doctors' || $categorySlug === 'teachers') {
+            $key = $categorySlug . '_default_image';
             $defPath = \Illuminate\Support\Facades\Cache::remember(
-                'settings:jobs_default_image',
+                "settings:{$key}",
                 now()->addHours(6),
-                fn() => \App\Models\SystemSetting::where('key', 'jobs_default_image')->value('value')
+                fn() => \App\Models\SystemSetting::where('key', $key)->value('value')
             );
             $mainUrl = $defPath ? asset('storage/' . $defPath) : null;
         } else {

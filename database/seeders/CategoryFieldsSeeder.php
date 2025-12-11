@@ -190,6 +190,16 @@ class CategoryFieldsSeeder extends Seeder
         // 🔹 حقول الأطباء
         $doctorsFields = [
             [
+                'category_slug' => 'doctors',
+                'field_name' => 'name',
+                'display_name' => 'الاسم',
+                'type' => 'string',
+                'options' => [],
+                'required' => true,
+                'filterable' => false,
+                'sort_order' => 0,
+            ],
+            [
                 'category_slug' => 'doctors', // غيّريه لو السلاج مختلف عندك
                 'field_name' => 'specialization',
                 'display_name' => 'التخصص',
@@ -207,6 +217,9 @@ class CategoryFieldsSeeder extends Seeder
                     'مخ وأعصاب',
                     'مسالك بولية',
                     'جراحة عامة',
+                    'علاج طبيعي',
+                    'تحاليل طبية',
+                    'أشعة',
                 ],
                 'required' => true,
                 'filterable' => true,

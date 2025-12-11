@@ -25,7 +25,9 @@ class SystemSettingController extends Controller
         'enable_global_external_notif',
         'free_ads_count',
         'free_ads_max_price',
-        'jobs_default_image'
+        'jobs_default_image',
+        'doctors_default_image',
+        'teachers_default_image'
     ];
 
     // مفاتيح حسب النوع
@@ -216,7 +218,7 @@ class SystemSettingController extends Controller
     {
         $request->validate([
             'image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:50120'],
-            'key' => ['required', 'string', 'in:jobs_default_image'],
+            'key' => ['required', 'string', 'in:jobs_default_image,doctors_default_image,teachers_default_image'],
         ]);
 
         $file = $request->file('image');
