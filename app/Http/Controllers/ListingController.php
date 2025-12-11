@@ -440,7 +440,6 @@ class ListingController extends Controller
         $sec = Section::fromSlug($section);
         abort_if($listing->category_id !== $sec->id(), 404);
 
-
         $listing->increment('views');
         $viewer = request()->user();
         if ($viewer->role != 'admin') {
@@ -491,6 +490,164 @@ class ListingController extends Controller
     protected function userIsAdmin($user): bool
     {
         return $user->role == 'admin';
+    }
+
+    /**
+     * Global Search across all listings.
+     * GET /api/listings/search?q=keyword
+     * 
+     * Searches in: description, address, governorate, city, and attributes (EAV)
+     * 
+     * Returns:
+     * - listings: array of matching listings with their category info
+     * - categories: count of listings per category
+     * - total: total count of matching listings
+     */
+    public function globalSearch(Request $request)
+    {
+        $keyword = trim($request->query('q', ''));
+
+        if (strlen($keyword) < 2) {
+            return response()->json([
+                'message' => 'يجب إدخال كلمة بحث (على الأقل حرفين)',
+            ], 422);
+        }
+
+        $perPage = (int) $request->query('per_page', 20);
+
+        // Build search condition that covers multiple fields
+        $searchCondition = function ($query) use ($keyword) {
+            $query->where('description', 'like', "%{$keyword}%")
+                ->orWhere('address', 'like', "%{$keyword}%")
+                // Search in governorate name
+                ->orWhereHas('governorate', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                })
+                // Search in city name
+                ->orWhereHas('city', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                })
+                // Search in make name
+                ->orWhereHas('make', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                })
+                // Search in model name
+                ->orWhereHas('model', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                })
+                // Search in main section name
+                ->orWhereHas('mainSection', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                })
+                // Search in sub section name
+                ->orWhereHas('subSection', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                })
+                // Search in attributes (EAV) - value_string column
+                ->orWhereHas('attributes', function ($q) use ($keyword) {
+                    $q->where('value_string', 'like', "%{$keyword}%");
+                });
+        };
+
+        // Base filter: published (Valid) and not expired
+        $baseFilter = function ($query) {
+            $query->where('status', 'Valid')
+                ->where(function ($q) {
+                    $q->whereNull('expire_at')
+                        ->orWhere('expire_at', '>=', now());
+                });
+        };
+
+        // Main query with all search conditions
+        $query = Listing::query()
+            ->where($baseFilter)
+            ->where($searchCondition)
+            ->with(['governorate', 'city', 'attributes', 'make', 'model', 'mainSection', 'subSection'])
+            ->orderByDesc('created_at');
+
+        // Get paginated results
+        $results = $query->paginate($perPage);
+
+        // Get category counts for the keyword (same search condition)
+        $categoryCounts = Listing::query()
+            ->where($baseFilter)
+            ->where($searchCondition)
+            ->selectRaw('category_id, COUNT(*) as count')
+            ->groupBy('category_id')
+            ->pluck('count', 'category_id');
+
+        // Get category names
+        $categoryIds = $categoryCounts->keys()->toArray();
+        $categories = \App\Models\Category::whereIn('id', $categoryIds)
+            ->get(['id', 'name', 'slug'])
+            ->keyBy('id');
+
+        // Build category breakdown
+        $categoryBreakdown = [];
+        foreach ($categoryCounts as $catId => $count) {
+            $cat = $categories->get($catId);
+            if ($cat) {
+                $categoryBreakdown[] = [
+                    'category_id' => $catId,
+                    'category_name' => $cat->name,
+                    'category_slug' => $cat->slug,
+                    'count' => $count,
+                ];
+            }
+        }
+
+        // Sort by count descending
+        usort($categoryBreakdown, fn($a, $b) => $b['count'] <=> $a['count']);
+
+        // Format listings
+        $listings = collect($results->items())->map(function ($item) use ($categories) {
+            $cat = $categories->get($item->category_id);
+            
+            // Get attributes as key-value
+            $attrs = [];
+            if ($item->relationLoaded('attributes')) {
+                foreach ($item->attributes as $attr) {
+                    $attrs[$attr->key] = $attr->value_string 
+                        ?? $attr->value_int 
+                        ?? $attr->value_decimal 
+                        ?? $attr->value_bool 
+                        ?? $attr->value_date 
+                        ?? null;
+                }
+            }
+
+            return [
+                'id' => $item->id,
+                'category_id' => $item->category_id,
+                'category_name' => $cat?->name,
+                'category_slug' => $cat?->slug,
+                'description' => $item->description,
+                'price' => $item->price,
+                'address' => $item->address,
+                'main_image_url' => $item->main_image ? asset('storage/' . $item->main_image) : null,
+                'governorate' => $item->governorate?->name,
+                'city' => $item->city?->name,
+                'make' => $item->make?->name,
+                'model' => $item->model?->name,
+                'main_section' => $item->mainSection?->name,
+                'sub_section' => $item->subSection?->name,
+                'attributes' => $attrs,
+                'created_at' => $item->created_at,
+            ];
+        });
+
+        return response()->json([
+            'keyword' => $keyword,
+            'total' => $results->total(),
+            'categories' => $categoryBreakdown,
+            'meta' => [
+                'page' => $results->currentPage(),
+                'per_page' => $results->perPage(),
+                'total' => $results->total(),
+                'last_page' => $results->lastPage(),
+            ],
+            'data' => $listings,
+        ]);
     }
 
     public function update(string $section, GenericListingRequest $request, Listing $listing, ListingService $service)
@@ -551,7 +708,7 @@ class ListingController extends Controller
 
         if (!$isOwner && !$isAdmin) {
             return response()->json([
-                'message' => 'غير مصرح لك بحذف هذا الإعلان.'
+                'message' => 'غير مصرح لك بحذف هذا الإعلان'
             ], 403);
         }
 

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ListingResource;
 use App\Models\Listing;
 use App\Models\ListingReport;
 use App\Models\SystemSetting;
+use App\Models\User;
 use App\Services\NotificationService;
 use App\Support\Section;
 use Illuminate\Http\JsonResponse;
@@ -65,7 +67,7 @@ class ListingReportController extends Controller
                 }
             })
             ->with(['reports' => function ($q) {
-                $q->select('id', 'listing_id', 'reason', 'created_at', 'status')
+                $q->select('id', 'listing_id', 'reason', 'created_at', 'status', 'is_read')
                     ->latest();
             }, 'user:id,name,referral_code,phone'])
             ->select('id', 'user_id', 'category_id', 'status', 'created_at', 'title');
@@ -96,6 +98,8 @@ class ListingReportController extends Controller
             $latestReport = $listing->reports->sortByDesc('created_at')->first();
 
             return [
+                // 'id_report'=>$latestReport->id,
+                'is_read' => $latestReport?->is_read ?? false,
                 'id' => $listing->id,
                 'title' => $listing->title ?? 'إعلان رقم ' . $listing->id,
                 'category_name' => $sec?->name,
@@ -186,12 +190,12 @@ class ListingReportController extends Controller
         //     }
         // } else {
         //     // Auto approval enabled:
-            // Force status to 'Valid' and 'admin_approved' to true.
-            $listing->update([
-                'status' => 'Valid',
-                'admin_approved' => true,
-                'admin_comment' => null,
-            ]);
+        // Force status to 'Valid' and 'admin_approved' to true.
+        $listing->update([
+            'status' => 'Valid',
+            'admin_approved' => true,
+            'admin_comment' => null,
+        ]);
         // }
 
         // Notify the listing owner
@@ -210,7 +214,44 @@ class ListingReportController extends Controller
         ]);
     }
 
-   
+
+
+    /**
+     * Mark the report (and all reports for this listing) as read.
+     */
+    public function markAsRead($id): JsonResponse
+    {
+        $ad = Listing::findOrFail($id);
+
+        // Also mark all other reports for the same listing as read
+        ListingReport::where('listing_id', $ad->id)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        $owner = User::select('id', 'name', 'created_at')->find($ad->user_id);
+
+        $userPayload = [
+            'id' => $owner?->id,
+            'name' => $owner?->name ?? "advertiser",
+            'joined_at' => $owner?->created_at?->toIso8601String(),
+            'joined_at_human' => $owner?->created_at?->diffForHumans(),
+        ];
+
+        return (new ListingResource(
+            $ad->load([
+                'attributes',
+                'governorate',
+                'city',
+                'make',
+                'model',
+                'mainSection',
+                'subSection',
+            ])
+        ))->additional([
+            'user' => $userPayload,
+            'message' => 'All reports for this listing marked as read.',
+        ])->response()->setStatusCode(200);
+    }
 
     /**
      * Remove the specified report (Admin only).

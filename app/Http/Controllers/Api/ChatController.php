@@ -7,13 +7,16 @@ use App\Http\Requests\Chat\SendMessageRequest;
 use App\Models\User;
 use App\Models\UserConversation;
 use App\Services\ChatService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ChatController extends Controller
 {
     public function __construct(
-        private ChatService $chatService
+        private ChatService $chatService,
+        private NotificationService $notificationService
     ) {}
 
     /**
@@ -39,6 +42,21 @@ class ChatController extends Controller
             $message,
             UserConversation::TYPE_PEER
         );
+
+        // Check cooldown for notification (10 minutes)
+        $cacheKey = "chat_notif_cooldown:{$sender->id}:{$receiver->id}";
+        if (!Cache::has($cacheKey)) {
+            $this->notificationService->dispatch(
+                $receiver->id,
+                'رسالة جديدة',
+                "لديك رسالة جديدة من {$sender->name}",
+                'new_message',
+                ['conversation_id' => $conversation->conversation_id, 'sender_id' => $sender->id]
+            );
+            
+            // Set cooldown for 10 minutes
+            Cache::put($cacheKey, true, now()->addMinutes(10));
+        }
 
         return response()->json([
             'message' => 'تم إرسال الرسالة بنجاح',

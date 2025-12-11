@@ -13,6 +13,11 @@ class ListingReport extends Model
         'reason',
         'details',
         'status',
+        'is_read',
+    ];
+
+    protected $casts = [
+        'is_read' => 'boolean',
     ];
 
     public function listing(): BelongsTo
