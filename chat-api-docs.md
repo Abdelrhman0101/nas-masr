@@ -229,6 +229,25 @@ Authorization: Bearer {token}
 
 ---
 
+## ✅ تحديث قراءة المحادثة (Mark as Read)
+
+يستخدم عند فتح المحادثة لتصفير العداد.
+
+```http
+PATCH /api/chat/{conversation_id}/read
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "message": "ok",
+    "marked_count": 5
+}
+```
+
+---
+
 ## 🏷️ بطاقة ملخص الإعلان (Listing Card)
 
 تستخدم لعرض تفاصيل مختصرة عن الإعلان داخل المحادثة لتوضيح السياق.
@@ -275,6 +294,7 @@ Authorization: Bearer {token}
 | محادثات العملاء | فتح محادثة | `GET /api/chat/{user_id}` |
 | محادثات العملاء | إرسال رسالة | `POST /api/chat/send` |
 | عام | عدد غير المقروء | `GET /api/chat/unread-count` |
+| عام | قراءة المحادثة | `PATCH /api/chat/{id}/read` |
 | عام | ملخص الإعلان | `GET /api/chat/listing-summary/{slug}/{id}` |
 
 > **ملاحظة:** كل الـ endpoints تحتاج `Authorization: Bearer {token}` في الـ Header.

@@ -667,10 +667,28 @@ class UserController extends Controller
     public function storeAgent(Request $request)
     {
         $user = request()->user();
-        $code = UserClient::create([
+
+        // Check if user already has an agent code
+        $code = \App\Models\UserClient::where('user_id', $user->id)->first();
+
+        if ($code) {
+            // Restore role if needed (optional safety)
+            if ($user->role !== 'representative') {
+                $user->role = 'representative';
+                $user->save();
+            }
+
+            return response()->json([
+                'message' => 'Agent code retrieved successfully',
+                'data' => $code
+            ]);
+        }
+
+        $code = \App\Models\UserClient::create([
             'user_id' => $user->id,
             // 'client_code'=>strtoupper(Str::random(10)),
         ]);
+        
         $user->role = 'representative';
         $user->save();
 

@@ -88,3 +88,4 @@
 | جلب المحادثة | `GET` | `/api/chat/{user_id}` | يأتي معه كائن `listing` إن وجد |
 | إرسال رسالة | `POST` | `/api/chat/send` | يقبل `listing_id`, `content_type` |
 | قراءة الإشعارات | `PATCH` | `/api/notifications/{id}/read` | |
+| قراءة المحادثة | `PATCH` | `/api/chat/{id}/read` | عند فتح الشات لتصفير العداد |
