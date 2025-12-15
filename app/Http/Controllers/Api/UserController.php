@@ -188,7 +188,7 @@ class UserController extends Controller
 
         if ($hasFeatured) {
             $packages[] = $makeCardLite(
-                'الباقة المتميزة',
+                'متميز',
                 $featuredActive,
                 $featuredExp,
                 $featuredDays,
@@ -208,7 +208,7 @@ class UserController extends Controller
 
         if ($hasStandard) {
             $packages[] = $makeCardLite(
-                'الباقة الاستاندرد',
+                'ستاندرد',
                 $standardActive,
                 $standardExp,
                 $standardDays,
@@ -262,7 +262,7 @@ class UserController extends Controller
         $packages = [];
         if ($pkg) {
             $packages[] = [
-                'title' => 'الباقة المتميزة',
+                'title' => 'متميز',
                 'plan' => 'featured',
                 'active' => (bool) $pkg->featured_active,
                 'expires_at' => $pkg->featured_expire_date,
@@ -272,7 +272,7 @@ class UserController extends Controller
                 'remaining' => (int) $pkg->featured_ads_remaining,
             ];
             $packages[] = [
-                'title' => 'الباقة القياسية',
+                'title' => 'ستاندرد',
                 'plan' => 'standard',
                 'active' => (bool) $pkg->standard_active,
                 'expires_at' => $pkg->standard_expire_date,

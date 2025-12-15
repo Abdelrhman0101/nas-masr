@@ -83,9 +83,9 @@ trait PackageHelper
     protected function mapFields(string $plan): array
     {
         return match ($plan) {
-            'featured' => ['featured_ads', 'featured_ads_used', 'featured_days', 'featured_start_date', 'featured_expire_date', 'الباقة المتميزة'],
-            'standard' => ['standard_ads', 'standard_ads_used', 'standard_days', 'standard_start_date', 'standard_expire_date', 'الباقة القياسية'],
-            default    => ['standard_ads', 'standard_ads_used', 'standard_days', 'standard_start_date', 'standard_expire_date', 'الباقة القياسية'],
+            'featured' => ['featured_ads', 'featured_ads_used', 'featured_days', 'featured_start_date', 'featured_expire_date', 'متميز'],
+            'standard' => ['standard_ads', 'standard_ads_used', 'standard_days', 'standard_start_date', 'standard_expire_date', 'ستاندرد'],
+            default    => ['standard_ads', 'standard_ads_used', 'standard_days', 'standard_start_date', 'standard_expire_date', 'ستاندرد'],
         };
     }
 
