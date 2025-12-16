@@ -16,9 +16,19 @@ class AuthController extends Controller
     {
         $data = $request->validated();
 
-        $existingUser = User::where('phone', $data['phone'])->first();
+        // Try to find existing user by phone first, then by email
+        $existingUser = null;
+        
+        if (!empty($data['phone'])) {
+            $existingUser = User::where('phone', $data['phone'])->first();
+        }
+        
+        if (!$existingUser && !empty($data['email'])) {
+            $existingUser = User::where('email', $data['email'])->first();
+        }
 
         if ($existingUser) {
+            // LOGIN FLOW - works for both phone and email
 
             if ($existingUser->status !== 'active') {
                 return response()->json(['message' => 'User is inactive. Please contact support.'], 403);
@@ -35,6 +45,13 @@ class AuthController extends Controller
             $message = "User logged in successfully.";
             $user = $existingUser;
         } else {
+            // REGISTRATION FLOW - requires phone number
+
+            if (empty($data['phone'])) {
+                return response()->json([
+                    'message' => 'Phone number is required for registration. Email can only be used for login.'
+                ], 422);
+            }
 
             if (!empty($data['referral_code'])) {
 

@@ -26,16 +26,24 @@ class RegisterRequest extends FormRequest
     {
         $isUpdate = $this->isMethod('put') || $this->isMethod('patch');
 
-        $existingUser = User::where('phone', $this->phone)->first();
+        // Check if user exists by phone or email for login flow
+        $existingUser = $this->phone 
+            ? User::where('phone', $this->phone)->first()
+            : ($this->email ? User::where('email', $this->email)->first() : null);
 
         return [
             'name' => ['nullable', 'string', 'max:100'],
             'phone' => [
-                $isUpdate ? 'nullable' : 'required',
+                $isUpdate ? 'nullable' : 'required_without:email',
+                'nullable',
                 'string',
                 'max:15',
-
-                !$existingUser ? Rule::unique('users', 'phone') : null,
+                !$existingUser && $this->phone ? Rule::unique('users', 'phone') : null,
+            ],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
             ],
             'password' => [
                 $isUpdate ? 'nullable' : 'required',
