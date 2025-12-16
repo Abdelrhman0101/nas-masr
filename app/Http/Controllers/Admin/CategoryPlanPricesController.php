@@ -32,6 +32,9 @@ class CategoryPlanPricesController extends Controller
                     'standard_ad_price'  => (float) ($price->standard_ad_price ?? 0),
                     'standard_days'      => (int)   ($price->standard_days ?? 0),
                     'standard_ads_count' => (int)   ($price->standard_ads_count ?? 0),
+                    
+                    // أقصى سعر للإعلان المجاني
+                    'free_ad_max_price'  => (float) ($price->free_ad_max_price ?? 0),
                 ];
             });
 
