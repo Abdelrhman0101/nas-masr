@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Models\UserPlanSubscription;
 use App\Models\CategoryPlanPrice;
+use App\Services\AdminNotificationService;
 use App\Services\NotificationService;
 
 
@@ -152,7 +153,6 @@ class ListingController extends Controller
 
 
         $items = $rows->map(function ($item) use ($supportsMakeModel, $supportsSections, $categorySlug, $categoryName) {
-            // attributes (EAV) كاملة
             $attrs = [];
             if ($item->relationLoaded('attributes')) {
                 foreach ($item->attributes as $row) {
@@ -230,7 +230,7 @@ class ListingController extends Controller
 
 
 
-    public function store(string $section, GenericListingRequest $request, ListingService $service)
+    public function store(string $section, GenericListingRequest $request, ListingService $service ,AdminNotificationService $adminNotification)
     {
         $user = $request->user();
         $sec = Section::fromSlug($section);
@@ -279,15 +279,15 @@ class ListingController extends Controller
 
             if ($activeSub) {
                 // If subscription exists, try to consume
-                 if (!$activeSub->consumeAd(1)) {
+                if (!$activeSub->consumeAd(1)) {
                     // Subscription empty
                     if ($isAdmin) {
-                         // Admin Bypass for Empty Subscription
-                         $paymentRequired = false;
-                         $activeSub = null; // Treat as no sub, fall to manual calc below
+                        // Admin Bypass for Empty Subscription
+                        $paymentRequired = false;
+                        $activeSub = null; // Treat as no sub, fall to manual calc below
                     } else {
                         $paymentRequired = true;
-                         $activeSub = null;
+                        $activeSub = null;
                     }
                 } else {
                     $data['expire_at'] = $activeSub->expires_at;
@@ -298,33 +298,33 @@ class ListingController extends Controller
                     $data['publish_via'] = env('LISTING_PUBLISH_VIA_SUBSCRIPTION', 'subscription');
                 }
             }
-            
+
             // If checking subscription failed or didn't exist
             if (!$activeSub && !$paymentType) {
                 $packageResult = $this->consumeForPlan($user->id, $planNorm);
                 $packageData   = $packageResult->getData(true);
 
                 if (empty($packageData['success']) || $packageData['success'] === false) {
-                     if ($isAdmin) {
+                    if ($isAdmin) {
                         // ADMIN SUPER BYPASS: No Package/Sub needed
                         $paymentRequired = false;
-                        
+
                         // Calculate Expiration based on Category Rules
                         $prices = CategoryPlanPrice::where('category_id', $sec->id())->first();
                         $days = $planNorm === 'featured'
                             ? ((int)($prices?->featured_days ?? 30))
                             : ((int)($prices?->standard_days ?? 30));
 
-                         if ($days <= 0) $days = 30; // Fallback
+                        if ($days <= 0) $days = 30; // Fallback
 
                         $data['expire_at'] = now()->addDays($days);
                         $paymentType = 'admin_bypass';
                         $priceOut = 0.0;
-                         $data['publish_via'] = 'admin'; // Or package to simulate
-                     } else {
+                        $data['publish_via'] = 'admin'; // Or package to simulate
+                    } else {
                         $paymentRequired = true;
                         $message = ' لا تملك باقة فعّالة، يجب عليك دفع قيمة هذا الإعلان.او الاشتراك في باقه';
-                     }
+                    }
                 } else {
                     $data['expire_at'] = Carbon::parse($packageData['expire_date']);
                     $paymentType = 'package';
@@ -380,8 +380,8 @@ class ListingController extends Controller
                         ], 402);
                     }
                 }
-            } 
-            
+            }
+
             // Standard free flow (or Admin Bypass passes through here)
             $data['publish_via'] = $freeVia;
             $paymentType = 'free';
@@ -413,7 +413,7 @@ class ListingController extends Controller
         }
 
         $listing = $service->create($sec, $data, $user->id);
-        
+
         // Only change role if not admin (don't downgrade admin to advertiser)
         if ($user->role !== 'admin') {
             $user->role = 'advertiser';
@@ -428,6 +428,16 @@ class ListingController extends Controller
                 'listing_id' => $listing->id,
                 // 'count'=>$userFreeCount,
             ], 402);
+        }
+
+        // Notify Admin if listing is Pending (Manual Approval)
+        if ($listing->status === 'Pending') {
+            $adminNotification->dispatch(
+                'إعلان جديد بانتظار المراجعة',
+                "يوجد إعلان جديد رقم #{$listing->id} في قسم {$sec->name} يحتاج للمراجعة والموافقة.",
+                'listing_pending',
+                ['listing_id' => $listing->id]
+            );
         }
 
         return (new ListingResource(

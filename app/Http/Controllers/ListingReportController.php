@@ -7,6 +7,7 @@ use App\Models\Listing;
 use App\Models\ListingReport;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\AdminNotificationService;
 use App\Services\NotificationService;
 use App\Support\Section;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ class ListingReportController extends Controller
     /**
      * Store a newly created report in storage.
      */
-    public function store(Request $request, Listing $listing, NotificationService $notificationService): JsonResponse
+    public function store(Request $request, Listing $listing, NotificationService $notificationService, AdminNotificationService $adminNotificationService): JsonResponse
     {
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:255'],
@@ -43,6 +44,14 @@ class ListingReportController extends Controller
                 ['listing_id' => $listing->id, 'report_id' => $report->id]
             );
         }
+
+        // Notify Admin about the new report
+        $adminNotificationService->dispatch(
+            'بلاغ جديد على إعلان',
+            "تم تقديم بلاغ جديد على إعلان رقم {$listing->id}: {$listing->title}. السبب: {$data['reason']}",
+            'new_report',
+            ['listing_id' => $listing->id, 'report_id' => $report->id]
+        );
 
         return response()->json([
             'message' => 'Report submitted successfully',

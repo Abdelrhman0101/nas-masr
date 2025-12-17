@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminNotificationController;
 use App\Http\Controllers\Admin\categoryController;
 use App\Http\Controllers\Admin\CategoryFieldsController;
 use App\Http\Controllers\Admin\CategoryPlanPricesController;
@@ -199,6 +200,11 @@ Route::prefix('admin')
         // Route::post('listing-reports/{listing}/reopen', [ListingReportController::class, 'reopen']);
         Route::patch('listing-reports/{id}/read', [ListingReportController::class, 'markAsRead']);
         Route::delete('listing-reports/{report}', [ListingReportController::class, 'destroy']);
+
+        // Admin Notifications
+        Route::get('admin-notifications', [AdminNotificationController::class, 'index']);
+        Route::get('admin-notifications/count', [AdminNotificationController::class, 'unreadCount']);
+        Route::patch('admin-notifications/{id}/read', [AdminNotificationController::class, 'markAsRead']);
 
         // Admin Support Chat Routes (Unified Inbox)
         Route::prefix('support')->group(function () {
