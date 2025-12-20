@@ -238,6 +238,7 @@ class StatsController extends Controller
                 'registered_at' => optional($u->created_at)->toDateString(),
                 'listings_count' => $u->listings_count ?? 0,
                 'role' => $u->role ?? 'user',
+                'phone_verified' => (bool) $u->otp_verified,
             ];
         })->values();
 
