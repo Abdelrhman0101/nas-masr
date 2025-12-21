@@ -42,6 +42,7 @@ class TransactionsController extends Controller
                 'amount' => (float) $p->amount,
                 'currency' => $p->currency,
                 'paid_at' => optional($p->paid_at)->toIso8601String(),
+                'created_at' => optional($p->created_at)->toIso8601String(),
                 'payment_method' => $p->payment_method,
                 'payment_reference' => $p->payment_reference,
                 'status' => $p->status,
@@ -71,6 +72,7 @@ class TransactionsController extends Controller
                 'payment_method' => $s->payment_method,
                 'payment_reference' => $s->payment_reference,
                 'subscribed_at' => optional($s->subscribed_at)->toIso8601String(),
+                'created_at' => optional($s->created_at)->toIso8601String(),
                 'expires_at' => optional($s->expires_at)->toIso8601String(),
             ];
         })->values();
