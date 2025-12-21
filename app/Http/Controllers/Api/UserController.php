@@ -866,4 +866,34 @@ class UserController extends Controller
             'message' => 'FCM token deleted successfully',
         ]);
     }
+
+    /**
+     * Admin: Get all clients for a specific representative.
+     * GET /api/admin/delegates/{user}/clients
+     */
+    public function delegateClients(User $user)
+    {
+        // Find the client relationship record for this user (representative)
+        $userClient = UserClient::where('user_id', $user->id)->first();
+
+        if (!$userClient || empty($userClient->clients)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No clients found for this representative',
+                'data' => []
+            ]);
+        }
+
+        // Fetch users based on the list of client IDs
+        // We select name, phone, address (location)
+        $clients = User::whereIn('id', $userClient->clients)
+            ->select('id', 'name', 'phone', 'address', 'lat', 'lng', 'status', 'role')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Clients retrieved successfully',
+            'data' => $clients
+        ]);
+    }
 }

@@ -145,6 +145,8 @@ Route::prefix('admin')
         Route::put('/disable/{bestAdvertiser}', [BestAdvertiserController::class, 'disable']);
         //change  password
         Route::put('/change-password/{user}', [AuthController::class, 'changePass']);
+        //Admin Delegates
+        Route::get('delegates/{user}/clients', [UserController::class, 'delegateClients']);
         //create otp
         Route::post('/create-otp/{user}', [UserController::class, 'createOtp']);
 

@@ -105,13 +105,11 @@ class AuthController extends Controller
     // admin change  password
     public function changePass(User $user)
     {
-
-        $user->password = Hash::make('123456789');
+        $user->password = Hash::make('123456');
 
         $user->save();
         return response()->json([
-            'message' => 'مرحبًا ' . $user->name . '، تم تغيير كلمة السر الخاصة بحسابك إلى: 123456789. يرجى تسجيل الدخول وتغييرها بعد أول دخول. فريق ناس مصر',
-            // 'password'=>
+            'message' => 'مرحبًا ' . $user->name . '، تم تغيير كلمة السر الخاصة بحسابك إلى: 123456. يرجى تسجيل الدخول وتغييرها بعد أول دخول. فريق ناس مصر',
         ]);
     }
 }
