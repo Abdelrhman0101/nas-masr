@@ -233,6 +233,7 @@ class StatsController extends Controller
                 'id' => $u->id,
                 'name' => $u->name,
                 'phone' => $u->phone,
+                'address' => $u->address,
                 'user_code' => $userCode,
                 'status' => $u->status ?? 'active',
                 'registered_at' => optional($u->created_at)->toDateString(),

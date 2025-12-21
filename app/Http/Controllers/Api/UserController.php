@@ -885,10 +885,25 @@ class UserController extends Controller
         }
 
         // Fetch users based on the list of client IDs
-        // We select name, phone, address (location)
         $clients = User::whereIn('id', $userClient->clients)
-            ->select('id', 'name', 'phone', 'address', 'lat', 'lng', 'status', 'role')
-            ->get();
+            ->withCount('listings')
+            ->get()
+            ->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'phone' => $u->phone,
+                    'address' => $u->address,
+                    'lat' => $u->lat,
+                    'lng' => $u->lng,
+                    'status' => $u->status ?? 'active',
+                    'role' => $u->role ?? 'user',
+                    'user_code' => $u->referral_code ?: (string) $u->id,
+                    'registered_at' => optional($u->created_at)->toDateString(),
+                    'listings_count' => $u->listings_count ?? 0,
+                    'phone_verified' => (bool) $u->otp_verified,
+                ];
+            });
 
         return response()->json([
             'success' => true,
