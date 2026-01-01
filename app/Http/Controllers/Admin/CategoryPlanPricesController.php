@@ -50,15 +50,15 @@ class CategoryPlanPricesController extends Controller
 
             'items.*.category_id'             => ['required', 'integer', 'exists:categories,id'],
 
-            'items.*.price_featured'          => ['required', 'numeric', 'min:0'],
-            'items.*.featured_ad_price'       => ['required', 'numeric', 'min:0'],
-            'items.*.featured_days'           => ['required', 'integer', 'min:0'],
-            'items.*.featured_ads_count'      => ['required', 'integer', 'min:0'],
+            'items.*.price_featured'          => ['nullable', 'numeric', 'min:0'],
+            'items.*.featured_ad_price'       => ['nullable', 'numeric', 'min:0'],
+            'items.*.featured_days'           => ['nullable', 'integer', 'min:0'],
+            'items.*.featured_ads_count'      => ['nullable', 'integer', 'min:0'],
 
-            'items.*.price_standard'          => ['required', 'numeric', 'min:0'],
-            'items.*.standard_ad_price'       => ['required', 'numeric', 'min:0'],
-            'items.*.standard_days'           => ['required', 'integer', 'min:0'],
-            'items.*.standard_ads_count'      => ['required', 'integer', 'min:0'],
+            'items.*.price_standard'          => ['nullable', 'numeric', 'min:0'],
+            'items.*.standard_ad_price'       => ['nullable', 'numeric', 'min:0'],
+            'items.*.standard_days'           => ['nullable', 'integer', 'min:0'],
+            'items.*.standard_ads_count'      => ['nullable', 'integer', 'min:0'],
             'items.*.free_ad_max_price'       => ['nullable', 'numeric', 'min:0'],
         ]);
 
