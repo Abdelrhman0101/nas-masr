@@ -34,7 +34,7 @@ class CategoriesTableSeeder extends Seeder
             ['slug' => 'jobs',             'name' => 'الوظائف',                   'icon' => 'الوظائف.png'],
             ['slug' => 'shipping',         'name' => 'الشحن والتوصيل',            'icon' => 'الشحن_التوصيل.png'],
             ['slug' => 'mens-clothes',     'name' => 'الملابس الرجاليه والاحذيه', 'icon' => 'الملابس_الرجاليه_الاحذيه.jpg'],
-            ['slug' => 'watches-jewelry',  'name' => 'الساعات والمجوهرات',       'icon' => 'الساعات_المجوهرات.png'],
+            ['slug' => 'watches-jewelry',  'name' => 'العطور والساعات والمجوهرات',       'icon' => 'الساعات_المجوهرات.png'],
             ['slug' => 'free-professions', 'name' => 'المهن الحره والخدمات',      'icon' => 'المهن_الحره_الخدمات.png'],
             ['slug' => 'kids-toys',        'name' => ' مستلزمات ولعب الاطفال',       'icon' => 'لعب_مستلزمات_الاطفال.png'],
             ['slug' => 'gym',              'name' => 'جيمات',                     'icon' => 'جيمات.png'],

@@ -342,9 +342,17 @@ class ListingController extends Controller
                 $freeCount = Cache::remember('settings:free_ads_count', now()->addHours(6), function () {
                     return (int) (SystemSetting::where('key', 'free_ads_count')->value('value') ?? 0);
                 });
-                $freeMaxPrice = Cache::remember('settings:free_ads_max_price', now()->addHours(6), function () {
-                    return (int) (SystemSetting::where('key', 'free_ads_max_price')->value('value') ?? 0);
-                });
+
+                // Get max price from Category settings first
+                $catPlan = CategoryPlanPrice::where('category_id', $sec->id())->first();
+                $freeMaxPrice = (int) ($catPlan?->free_ad_max_price ?? 0);
+
+                // Fallback to global setting if 0
+                if ($freeMaxPrice === 0) {
+                    $freeMaxPrice = Cache::remember('settings:free_ads_max_price', now()->addHours(6), function () {
+                        return (int) (SystemSetting::where('key', 'free_ads_max_price')->value('value') ?? 0);
+                    });
+                }
 
                 $userFreeCount = Listing::query()
                     ->where('user_id', $user->id)
@@ -549,9 +557,17 @@ class ListingController extends Controller
                 ->count();
 
             $overCount = ($freeCount > 0 && ($userFreeCount + 1) > $freeCount);
-            $freeMaxPrice = Cache::remember('settings:free_ads_max_price', now()->addHours(6), function () {
-                return (int) (SystemSetting::where('key', 'free_ads_max_price')->value('value') ?? 0);
-            });
+            
+            // Get max price from Category settings first
+            $catPlan = CategoryPlanPrice::where('category_id', $sec->id())->first();
+            $freeMaxPrice = (int) ($catPlan?->free_ad_max_price ?? 0);
+
+            // Fallback to global setting if 0
+            if ($freeMaxPrice === 0) {
+                $freeMaxPrice = Cache::remember('settings:free_ads_max_price', now()->addHours(6), function () {
+                    return (int) (SystemSetting::where('key', 'free_ads_max_price')->value('value') ?? 0);
+                });
+            }
             $priceVal = (float) $listing->price;
             $overPrice = ($freeMaxPrice > 0 && $priceVal > $freeMaxPrice);
 
