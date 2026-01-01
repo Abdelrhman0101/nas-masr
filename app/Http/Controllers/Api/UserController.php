@@ -557,9 +557,9 @@ class UserController extends Controller
             // ✅ لو القسم بيدعم رئيسي/فرعي، نضيفهم
             if ($supportsSections) {
                 $data['main_section_id'] = $row->main_section_id;
-                $data['main_section_name'] = $mainSectionName;
+                $data['main_section'] = $mainSectionName;
                 $data['sub_section_id'] = $row->sub_section_id;
-                $data['sub_section_name'] = $subSectionName;
+                $data['sub_section'] = $subSectionName;
             }
 
             return $data;
