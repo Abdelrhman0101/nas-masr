@@ -70,6 +70,11 @@ class CategoryBannerController extends Controller
     {
         $data = $request->validated();
 
+        // Set default banner_type if not provided
+        if (!isset($data['banner_type'])) {
+            $data['banner_type'] = CategoryBanner::TYPE_HOME_PAGE;
+        }
+
         if ($request->hasFile('banner_image')) {
             $path = $request->file('banner_image')->store('banners', 'uploads');
             $data['banner_image'] = basename($path);

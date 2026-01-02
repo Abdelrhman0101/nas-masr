@@ -27,7 +27,7 @@ class CategoryBannerRequest extends FormRequest
                 'exists:categories,id',
             ],
             'banner_type' => [
-                $isUpdate ? 'sometimes' : 'required',
+                'sometimes',
                 'in:home_page,ad_creation',
             ],
             'banner_image' => [
