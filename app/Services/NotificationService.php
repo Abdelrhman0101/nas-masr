@@ -28,6 +28,11 @@ class NotificationService
 
         // ✅ إشعارات الأدمن: لا قيود، لا cooldown، لا شيء - تنفيذ فوري
         if ($type === 'الاداره') {
+            Log::info('🔵 Admin notification bypass activated', [
+                'user_id' => $userId,
+                'title' => $title,
+            ]);
+
             // Create internal notification
             $notification = Notification::create([
                 'user_id' => $user->id,
@@ -45,6 +50,13 @@ class NotificationService
 
             $shouldSendExternal = $globalEnabled && (bool) $user->receive_external_notif;
 
+            Log::info('🔍 External notification check', [
+                'global_enabled' => $globalEnabled,
+                'user_setting' => (bool) $user->receive_external_notif,
+                'should_send' => $shouldSendExternal,
+                'has_token' => !empty($user->fcm_token),
+            ]);
+
             $externalSent = false;
             if ($shouldSendExternal) {
                 $externalSent = $this->sendExternal($user, [
@@ -52,6 +64,11 @@ class NotificationService
                     'body' => $body,
                     'type' => $type,
                     'data' => $data,
+                ]);
+                
+                Log::info('📤 External notification result', [
+                    'sent' => $externalSent,
+                    'user_id' => $userId,
                 ]);
             }
 

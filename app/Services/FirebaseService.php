@@ -38,7 +38,12 @@ class FirebaseService
                 ->withNotification($notification);
 
             if ($data) {
-                $message = $message->withData($data);
+                // ✅ Firebase يتطلب أن تكون كل القيم strings
+                $stringData = [];
+                foreach ($data as $key => $value) {
+                    $stringData[$key] = is_array($value) ? json_encode($value) : (string) $value;
+                }
+                $message = $message->withData($stringData);
             }
 
             $this->messaging->send($message);
@@ -95,7 +100,12 @@ class FirebaseService
                 ->withNotification($notification);
 
             if ($data) {
-                $message = $message->withData($data);
+                // ✅ Firebase يتطلب أن تكون كل القيم strings
+                $stringData = [];
+                foreach ($data as $key => $value) {
+                    $stringData[$key] = is_array($value) ? json_encode($value) : (string) $value;
+                }
+                $message = $message->withData($stringData);
             }
 
             $this->messaging->send($message);
