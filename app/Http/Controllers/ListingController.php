@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use App\Models\UserPlanSubscription;
 use App\Models\CategoryPlanPrice;
+use App\Models\CategoryBanner;
 use App\Services\AdminNotificationService;
 use App\Services\NotificationService;
 
@@ -267,7 +269,7 @@ class ListingController extends Controller
 
         if (!empty($data['plan_type']) && $data['plan_type'] !== 'free') {
             $planNorm = $this->normalizePlan($data['plan_type']);
-            
+
             // 1. Try to consume from Package (UserPackages) first - This is what Admin creates
             $packageResult = $this->consumeForPlan($user->id, $planNorm, $sec->id());
             $packageData   = $packageResult->getData(true);
@@ -281,8 +283,7 @@ class ListingController extends Controller
                     ? (float) ($prices?->featured_ad_price ?? 0)
                     : (float) ($prices?->standard_ad_price ?? 0);
                 $data['publish_via'] = env('LISTING_PUBLISH_VIA_PACKAGE', 'package');
-            } 
-            else {
+            } else {
                 // 2. If no Package, check for legacy Subscription (UserPlanSubscription)
                 $activeSub = UserPlanSubscription::query()
                     ->where('user_id', $user->id)
@@ -298,8 +299,7 @@ class ListingController extends Controller
                     $paymentType = 'subscription';
                     $data['publish_via'] = env('LISTING_PUBLISH_VIA_SUBSCRIPTION', 'subscription');
                     // Note: Consumption logic for subscription can be added here if needed
-                } 
-                elseif ($isAdmin) {
+                } elseif ($isAdmin) {
                     // 3. Admin Bypass
                     $paymentRequired = false;
                     $prices = CategoryPlanPrice::where('category_id', $sec->id())->first();
@@ -311,8 +311,7 @@ class ListingController extends Controller
                     $paymentType = 'admin_bypass';
                     $priceOut = 0.0;
                     $data['publish_via'] = 'admin';
-                } 
-                else {
+                } else {
                     // 4. No Package, No Sub -> Payment Required
                     $paymentRequired = true;
                     $message = $packageData['message'] ?? "لا تملك باقة فعّالة أو رصيد كافٍ، يجب عليك الدفع لنشر هذا الإعلان.";
@@ -542,7 +541,7 @@ class ListingController extends Controller
                 ->count();
 
             $overCount = ($freeCount > 0 && ($userFreeCount + 1) > $freeCount);
-            
+
             // Get max price from Category settings first
             $catPlan = CategoryPlanPrice::where('category_id', $sec->id())->first();
             $freeMaxPrice = (int) ($catPlan?->free_ad_max_price ?? 0);
@@ -605,9 +604,32 @@ class ListingController extends Controller
         }
 
         $banner = null;
-        if ($sec->slug == "real_estate") {
-            $banner = "storage/uploads/banner/796c4c36d93281ccfb0cac71ed31e5d1b182ae79.png";
-        };
+        $slug = $sec->slug;
+
+        // 1. Try to find banner from DB for this category
+        $catBanner = CategoryBanner::where('slug', $slug)->where('is_active', true)->first();
+        if ($catBanner) {
+            $banner = $catBanner->banner_path;
+        }
+
+        // 2. Fallback to unified if not found
+        if (!$banner) {
+            $unifiedBanner = CategoryBanner::where('slug', 'unified')->where('is_active', true)->first();
+            if ($unifiedBanner) {
+                $banner = $unifiedBanner->banner_path;
+            }
+        }
+
+        // 3. Last resort fallback (FileSystem check for legacy support or if DB is empty)
+        if (!$banner) {
+            $unifiedPath = public_path("storage/uploads/banner/unified");
+            if (File::isDirectory($unifiedPath)) {
+                $files = File::files($unifiedPath);
+                if (count($files) > 0) {
+                    $banner = "storage/uploads/banner/unified/" . $files[0]->getFilename();
+                }
+            }
+        }
 
         $owner = User::select('id', 'name', 'created_at')->find($listing->user_id);
         $adsCount = Listing::where('user_id', $listing->user_id)->count();

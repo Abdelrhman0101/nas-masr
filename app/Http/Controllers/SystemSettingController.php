@@ -29,7 +29,9 @@ class SystemSettingController extends Controller
         'featured_user_max_ads',
         'jobs_default_image',
         'doctors_default_image',
-        'teachers_default_image'
+        'teachers_default_image',
+        'home_image',
+        'home_ad_image'
     ];
 
     // مفاتيح حسب النوع
@@ -229,7 +231,8 @@ class SystemSettingController extends Controller
         $file = $request->file('image');
         $key = $request->input('key');
 
-        $path = $file->storeAs('defaults', $key . '.' . $file->getClientOriginalExtension(), 'public');
+        $directory = in_array($key, ['home_image', 'home_ad_image']) ? 'uploads/banner' : 'defaults';
+        $path = $file->storeAs($directory, $key . '.' . $file->getClientOriginalExtension(), 'public');
 
         SystemSetting::updateOrCreate(
             ['key' => $key],

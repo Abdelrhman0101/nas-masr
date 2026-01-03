@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminNotificationController;
+use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\categoryController;
 use App\Http\Controllers\Admin\CategoryFieldsController;
 use App\Http\Controllers\Admin\CategoryPlanPricesController;
@@ -62,6 +63,9 @@ Route::get('/the-best/{section}', [BestAdvertiserController::class, 'index']);
 
 // Global Search across all listings
 Route::get('/listings/search', [ListingController::class, 'globalSearch']);
+
+Route::get('banners', [BannerController::class, 'index']);
+
 
 Route::prefix('v1/{section}')->group(function () {
     Route::bind('listing', function ($value) {
@@ -188,6 +192,11 @@ Route::prefix('admin')
 
         Route::get('category-plan-prices', [CategoryPlanPricesController::class, 'index']);
         Route::post('category-plan-prices', [CategoryPlanPricesController::class, 'store']);
+
+        // Banner Management
+        Route::get('banners', [BannerController::class, 'index']);
+        Route::post('banners', [BannerController::class, 'store']);
+        Route::put('banners/{slug}', [BannerController::class, 'update']);
 
         // User Subscriptions (per category)
         Route::get('user-subscriptions', [UserSubscriptionsController::class, 'index']);

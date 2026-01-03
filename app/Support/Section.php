@@ -124,7 +124,7 @@ final class Section
             'tools',
             'missing',
             'spare-parts',
-            'jobs',
+            // 'jobs',
         ], true);
     }
 
@@ -206,8 +206,9 @@ final class Section
             if (!empty($f['options'])) {
                 $opts = is_array($f['options']) ? $f['options'] : json_decode($f['options'], true);
                 if (is_array($opts) && $opts) {
-                    if (!in_array('غير ذلك', $opts)) {
-                        $rules[] = 'in:' . implode(',', array_map(fn($v) => str_replace(',', '،', (string) $v), $opts));
+                    if ($this->slug === 'jobs' || !in_array('غير ذلك', $opts)) {
+                        // $rules[] = 'in:' . implode(',', array_map(fn($v) => str_replace(',', '،', (string) $v), $opts));
+                        $rules[] = \Illuminate\Validation\Rule::in($opts);
                     }
                 }
             }
