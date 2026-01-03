@@ -26,6 +26,9 @@ class NotificationService
     {
         $user = User::findOrFail($userId);
 
+        // استثناء إشعارات الأدمن من الـ cooldown
+        $isAdminNotification = $type === 'الاداره';
+
         // Build cache key with type and listing_id for per-listing rate limiting
         $listingId = $data['listing_id'] ?? null;
         $cacheKeySuffix = $type ? ":{$type}" : '';
@@ -33,17 +36,20 @@ class NotificationService
         $cacheKey = "notif:cooldown:{$user->id}{$cacheKeySuffix}";
 
         // Check cooldown - skip ALL notifications (internal + external) if within cooldown period
-        $lastSent = Cache::get($cacheKey);
-        $nowTs = now()->timestamp;
-        
-        if ($lastSent && ($nowTs - (int) $lastSent) < self::COOLDOWN_SECONDS) {
-            // Within cooldown period - skip notification entirely
-            return [
-                'notification' => null,
-                'external_sent' => false,
-                'skipped' => true,
-                'cooldown_remaining' => self::COOLDOWN_SECONDS - ($nowTs - (int) $lastSent),
-            ];
+        // لكن نستثني إشعارات الأدمن
+        if (!$isAdminNotification) {
+            $lastSent = Cache::get($cacheKey);
+            $nowTs = now()->timestamp;
+            
+            if ($lastSent && ($nowTs - (int) $lastSent) < self::COOLDOWN_SECONDS) {
+                // Within cooldown period - skip notification entirely
+                return [
+                    'notification' => null,
+                    'external_sent' => false,
+                    'skipped' => true,
+                    'cooldown_remaining' => self::COOLDOWN_SECONDS - ($nowTs - (int) $lastSent),
+                ];
+            }
         }
 
         // Cooldown passed - create internal notification
@@ -55,8 +61,11 @@ class NotificationService
             'data' => $data,
         ]);
 
-        // Update cooldown timestamp
-        Cache::put($cacheKey, $nowTs, now()->addSeconds(self::COOLDOWN_SECONDS));
+        // Update cooldown timestamp (فقط للإشعارات العادية، ليس للأدمن)
+        if (!$isAdminNotification) {
+            $nowTs = now()->timestamp;
+            Cache::put($cacheKey, $nowTs, now()->addSeconds(self::COOLDOWN_SECONDS));
+        }
 
         // Check if external notification should be sent
         $globalEnabled = Cache::remember('settings:enable_global_external_notif', now()->addHours(6), function () {
