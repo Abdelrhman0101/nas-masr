@@ -48,6 +48,8 @@ class BannerController extends Controller
         'heavy-transport',
         'tools',
         'missing',
+        'home_ads',
+        'home',
         'unified' // fallback
     ];
 
